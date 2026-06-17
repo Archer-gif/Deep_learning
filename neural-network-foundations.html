@@ -1,0 +1,1100 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>神经网络基础复习笔记</title>
+  <script>
+    window.MathJax = {
+      tex: { inlineMath: [['$', '$']], displayMath: [['$$', '$$']] },
+      svg: { fontCache: 'global' }
+    };
+  </script>
+  <script>
+    window.addEventListener('DOMContentLoaded', () => {
+      const script = document.createElement('script');
+      script.src = 'https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js';
+      script.async = true;
+      document.head.appendChild(script);
+    });
+  </script>
+  <style>
+    :root {
+      --bg: #f6f7fb;
+      --paper: #ffffff;
+      --ink: #20242c;
+      --muted: #667085;
+      --line: #dfe3ea;
+      --nav: #14213d;
+      --nav-soft: #22345f;
+      --accent: #c62828;
+      --accent-soft: #fff1f1;
+      --blue: #246bfe;
+      --green: #17805b;
+      --shadow: 0 14px 34px rgba(20, 33, 61, 0.12);
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      color: var(--ink);
+      background: var(--bg);
+      font-family: "Microsoft YaHei", "PingFang SC", "Noto Sans CJK SC", Arial, sans-serif;
+      line-height: 1.72;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 280px minmax(0, 1fr);
+      min-height: 100vh;
+    }
+
+    aside {
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      overflow: auto;
+      background: var(--nav);
+      color: #fff;
+      padding: 24px 18px;
+      border-right: 1px solid rgba(255,255,255,0.08);
+    }
+
+    .brand {
+      padding: 6px 8px 18px;
+      border-bottom: 1px solid rgba(255,255,255,0.14);
+      margin-bottom: 16px;
+    }
+
+    .brand h1 {
+      margin: 0 0 8px;
+      font-size: 24px;
+      line-height: 1.18;
+      letter-spacing: 0;
+    }
+
+    .brand p {
+      margin: 0;
+      color: rgba(255,255,255,0.74);
+      font-size: 13px;
+    }
+
+    nav a {
+      display: block;
+      color: rgba(255,255,255,0.84);
+      text-decoration: none;
+      padding: 8px 10px;
+      border-radius: 6px;
+      font-size: 14px;
+    }
+
+    nav a:hover,
+    nav a.active {
+      background: var(--nav-soft);
+      color: #fff;
+    }
+
+    main {
+      min-width: 0;
+      padding: 28px;
+    }
+
+    .hero,
+    .section {
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: 0 8px 24px rgba(20, 33, 61, 0.06);
+      padding: 24px;
+      margin-bottom: 18px;
+    }
+
+    .hero {
+      background: linear-gradient(120deg, #ffffff 0%, #f4f8ff 100%);
+      box-shadow: var(--shadow);
+      padding: 28px;
+      margin-bottom: 22px;
+    }
+
+    h1 {
+      margin: 0 0 10px;
+      font-size: 34px;
+      line-height: 1.16;
+      letter-spacing: 0;
+    }
+
+    h2 {
+      margin: 0 0 16px;
+      font-size: 26px;
+      line-height: 1.25;
+      letter-spacing: 0;
+    }
+
+    h3 {
+      margin: 24px 0 10px;
+      font-size: 19px;
+      line-height: 1.32;
+      letter-spacing: 0;
+    }
+
+    h4 {
+      margin: 18px 0 8px;
+      font-size: 16px;
+      line-height: 1.35;
+      letter-spacing: 0;
+    }
+
+    p { margin: 10px 0; }
+    ul, ol { padding-left: 22px; }
+    li { margin: 4px 0; }
+
+    blockquote {
+      margin: 14px 0;
+      border-left: 4px solid var(--accent);
+      background: var(--accent-soft);
+      padding: 12px 14px;
+      border-radius: 0 8px 8px 0;
+      color: var(--ink);
+    }
+
+    code {
+      font-family: Consolas, "Cascadia Code", monospace;
+      background: #eef2f7;
+      border: 1px solid #d8dee8;
+      border-radius: 5px;
+      padding: 1px 5px;
+      font-size: 0.92em;
+    }
+
+    .tag {
+      display: inline-flex;
+      align-items: center;
+      min-height: 24px;
+      padding: 2px 8px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 700;
+      margin-left: 8px;
+      vertical-align: middle;
+    }
+
+    .tag.important { color: var(--accent); background: var(--accent-soft); border: 1px solid #ffd3d3; }
+    .tag.know { color: var(--green); background: #eefaf5; border: 1px solid #cdeedf; }
+    .tag.pass { color: var(--blue); background: #eef4ff; border: 1px solid #d5e2ff; }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 14px 0;
+      overflow: hidden;
+      border-radius: 8px;
+      border: 1px solid var(--line);
+      display: table;
+    }
+
+    th, td {
+      border: 1px solid var(--line);
+      padding: 10px 12px;
+      text-align: left;
+      vertical-align: top;
+    }
+
+    th {
+      background: #f1f4f9;
+      font-weight: 700;
+    }
+
+    .formula {
+      overflow-x: auto;
+      background: #fbfcff;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 12px 14px;
+      margin: 12px 0;
+      text-align: center;
+    }
+
+    details {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 12px 14px;
+      margin: 14px 0;
+      background: #fcfdff;
+    }
+
+    summary {
+      cursor: pointer;
+      font-weight: 700;
+      color: var(--nav);
+    }
+
+    .footer {
+      color: var(--muted);
+      font-size: 13px;
+      padding: 18px 4px 4px;
+      text-align: center;
+    }
+
+    @media (max-width: 900px) {
+      .layout { grid-template-columns: 1fr; }
+      aside {
+        position: relative;
+        height: auto;
+        padding: 18px;
+      }
+      nav {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 6px;
+      }
+      main { padding: 16px; }
+      h1 { font-size: 28px; }
+      h2 { font-size: 22px; }
+      table { display: block; overflow-x: auto; }
+    }
+</style>
+</head>
+<body>
+  <div class="layout">
+    <aside>
+      <div class="brand">
+        <h1>神经网络基础</h1>
+        <p>第四章 + 第五章复习笔记</p>
+      </div>
+      <nav id="toc">
+        <a href="#overview">神经网络基础复习笔记</a>
+        <a href="#priority">复习优先级</a>
+        <a href="#mlp">多层感知机基本结构</a>
+        <a href="#activation">激活函数</a>
+        <a href="#loss">损失函数</a>
+        <a href="#backprop">梯度计算与反向传播</a>
+        <a href="#data">数据准备</a>
+        <a href="#dropout">Dropout 丢弃层</a>
+        <a href="#normalization">归一化层</a>
+        <a href="#initialization">初始化</a>
+        <a href="#optimizers">优化器</a>
+        <a href="#weight-decay">权重衰减</a>
+        <a href="#lr">学习率技巧</a>
+        <a href="#survey">其他内容简单带过</a>
+        <a href="#summary">一页速记</a>
+      </nav>
+    </aside>
+    <main>
+<section class="hero" id="overview"><h1>神经网络基础复习笔记</h1>
+<blockquote>依据第四章、第五章课件，以及本轮关于交叉熵、参数 <code>theta</code>、Dropout、归一化、Xavier 初始化、Adam/AMSGrad 的问答整理。红色重点图中的内容优先详细写；黑色内容做到了解；课件中出现但重点图未列出的内容简单带过。</blockquote>
+</section>
+<section class="section" id="priority"><h2>0. 复习优先级</h2>
+<table>
+<thead><tr>
+<th>优先级</th>
+<th>内容</th>
+<th>复习目标</th>
+</tr></thead><tbody>
+<tr>
+<td>重点</td>
+<td>激活函数、损失函数、梯度计算、丢弃层、初始化、优化器、权重衰减、学习率技巧、数据增强</td>
+<td>能解释为什么这样做、公式每一项含义、训练和测试阶段差异</td>
+</tr>
+<tr>
+<td>了解</td>
+<td>多层感知机基本结构、归一化、类型转换、批归一化、层归一化</td>
+<td>能说清概念、适用场景和常见区别</td>
+</tr>
+<tr>
+<td>简单带过</td>
+<td>神经元/感知机回顾、深度与宽度、文本表示、模型评估、仿真实验</td>
+<td>知道名字和直观作用即可</td>
+</tr>
+</tbody></table>
+</section>
+<section class="section" id="mlp"><h2>1. 多层感知机基本结构 <span class="tag know">了解</span></h2>
+<p>多层感知机（Multi-layer Perceptron, MLP）是前馈神经网络，由输入层、一个或多个隐藏层、输出层组成。输入层只承载特征，不做真正的神经元计算；隐藏层和输出层会做线性变换，再经过激活函数。</p>
+<p>第 <code>l</code> 层常写成：</p>
+<div class="formula">
+$$
+z^{(l)} = W^{(l)}x^{(l-1)} + b^{(l)}, \qquad
+x^{(l)} = \sigma^{(l)}(z^{(l)})
+$$
+</div>
+<p>其中：</p>
+<ul>
+<li><code>x^(l-1)</code> 是上一层输出；</li>
+<li><code>W^(l)</code> 是第 <code>l</code> 层权重矩阵；</li>
+<li><code>b^(l)</code> 是第 <code>l</code> 层偏置；</li>
+<li><code>z^(l)</code> 是激活前的线性输出；</li>
+<li><code>x^(l)</code> 是激活后的输出；</li>
+<li><code>sigma</code> 是激活函数。</li>
+</ul>
+<p>如果第 <code>l-1</code> 层有 <code>n_{l-1}</code> 个神经元，第 <code>l</code> 层有 <code>n_l</code> 个神经元，则：</p>
+<div class="formula">
+$$
+W^{(l)} \in \mathbb R^{n_l \times n_{l-1}}, \qquad
+b^{(l)} \in \mathbb R^{n_l}
+$$
+</div>
+<p>这里的 <code>n_l</code> 可以理解为第 <code>l</code> 层神经元数量，也就是该层输出维度；<code>n_{l-1}</code> 是上一层神经元数量，也就是该层输入维度。</p>
+<h3>参数 theta 是什么</h3>
+<p>课件中写的 <code>theta</code> 表示神经网络中所有需要学习的参数：</p>
+<div class="formula">
+$$
+\theta=\{\theta^{(1)},\theta^{(2)},\dots,\theta^{(L)}\}
+$$
+</div>
+<p>更具体地说：</p>
+<div class="formula">
+$$
+\theta=\{W^{(1)},b^{(1)},W^{(2)},b^{(2)},\dots,W^{(L)},b^{(L)}\}
+$$
+</div>
+<p>训练神经网络，本质上就是不断调整 <code>theta</code>，让损失函数变小。</p>
+</section>
+<section class="section" id="activation"><h2>2. 激活函数 <span class="tag important">重点</span></h2>
+<p>激活函数的作用是给网络引入非线性。没有激活函数时，多层线性变换叠加后仍然等价于一个线性模型，网络再深也表达不了复杂非线性边界。</p>
+<h3>常见激活函数</h3>
+<table>
+<thead><tr>
+<th>激活函数</th>
+<th>形式</th>
+<th>特点</th>
+</tr></thead><tbody>
+<tr>
+<td>Sigmoid</td>
+<td>$$\sigma(z)=\frac{1}{1+e^{-z}}$$</td>
+<td>输出在 <code>(0,1)</code>，可解释为概率，但容易梯度消失</td>
+</tr>
+<tr>
+<td>Tanh</td>
+<td>$$\tanh(z)=\frac{e^z-e^{-z}}{e^z+e^{-z}}$$</td>
+<td>输出在 <code>(-1,1)</code>，零中心，但也可能梯度消失</td>
+</tr>
+<tr>
+<td>ReLU</td>
+<td>$$\operatorname{ReLU}(z)=\max(0,z)$$</td>
+<td>计算简单，实践常用，但负半轴梯度为 0</td>
+</tr>
+<tr>
+<td>Leaky ReLU</td>
+<td>$$\sigma(z)=\begin{cases}z,&z>0\\ \alpha z,&z\le 0\end{cases}$$</td>
+<td>负半轴保留小梯度，缓解 ReLU 死亡问题</td>
+</tr>
+</tbody></table>
+<h3>为什么 Sigmoid/Tanh 容易梯度消失</h3>
+<p>反向传播时，每一层梯度会连乘许多局部导数。Sigmoid 的导数满足：</p>
+<div class="formula">
+$$
+\sigma&#x27;(z)=\sigma(z)(1-\sigma(z)) \le \frac14
+$$
+</div>
+<p>如果很多层都乘上小于 1 的数，越往前层梯度越小，这就是梯度消失。Tanh 也有类似问题。ReLU 在正半轴导数为 1，所以通常更适合深层网络。</p>
+<details>
+<summary>展开：为什么没有激活函数时 MLP 仍然是线性模型</summary>
+<p>假设每一层都没有非线性激活：</p>
+<div class="formula">
+$$
+x^{(1)}=W^{(1)}x+b^{(1)}
+$$
+</div>
+<p>第二层为：</p>
+<div class="formula">
+$$
+x^{(2)}=W^{(2)}x^{(1)}+b^{(2)}
+=W^{(2)}W^{(1)}x+W^{(2)}b^{(1)}+b^{(2)}
+$$
+</div>
+<p>这仍然可以写成：</p>
+<div class="formula">
+$$
+x^{(2)}=\tilde W x+\tilde b
+$$
+</div>
+<p>继续叠加任意层，最终仍然只是一个线性变换。因此深度网络必须依赖激活函数提供非线性表达能力。</p>
+</details>
+</section>
+<section class="section" id="loss"><h2>3. 损失函数 <span class="tag important">重点</span></h2>
+<p>损失函数用来度量模型预测和真实目标之间的差距。训练时优化器会根据损失函数的梯度更新参数。</p>
+<h3>多变量回归任务</h3>
+<p>多变量回归预测的是多个连续数值，例如：</p>
+<div class="formula">
+$$
+y=[\text{房价}, \text{面积}, \text{租金}]
+$$
+</div>
+<p>模型输出通常是连续向量：</p>
+<div class="formula">
+$$
+\hat y=f_{\mathrm{MLP}}(x)\in \mathbb R^k
+$$
+</div>
+<p>常用损失是均方误差：</p>
+<div class="formula">
+$$
+\mathcal L(\theta,D)=\frac1m\sum_{i=1}^m\|\hat y_i-y_i\|_2^2
+$$
+</div>
+<h3>多分类任务</h3>
+<p>多分类预测的是一个样本属于哪一个类别。标签常用 one-hot 向量表示，例如三分类中第 2 类：</p>
+<div class="formula">
+$$
+y_i=[0,1,0]
+$$
+</div>
+<p>输出层先得到一组分数 <code>z</code>，再经过 Softmax 转成概率：</p>
+<div class="formula">
+$$
+\hat y_{i,c}=
+\frac{\exp(z_c^{(L)})}{\sum_{j=1}^k \exp(z_j^{(L)})}
+$$
+</div>
+<p>每一项表示样本属于对应类别的概率，并且所有概率和为 1。</p>
+<h3>交叉熵损失</h3>
+<p>多分类常用交叉熵损失：</p>
+<div class="formula">
+$$
+\mathcal L(\theta,D)=
+-\sum_{i=1}^m\sum_{c=1}^k y_{i,c}\log \hat y_{i,c}
+$$
+</div>
+<p>因为 <code>y_i</code> 是 one-hot，所以只有真实类别那一项会留下。若真实类别预测概率高，损失小；若真实类别预测概率低，损失大。</p>
+<p>举例：真实类别为第 2 类，预测为：</p>
+<div class="formula">
+$$
+\hat y=[0.1,0.8,0.1]
+$$
+</div>
+<p>则损失主要看：</p>
+<div class="formula">
+$$
+-\log(0.8)
+$$
+</div>
+<p>如果预测成：</p>
+<div class="formula">
+$$
+\hat y=[0.8,0.1,0.1]
+$$
+</div>
+<p>则损失变成：</p>
+<div class="formula">
+$$
+-\log(0.1)
+$$
+</div>
+<p>会明显更大。</p>
+<h3>多变量回归与多分类的区别</h3>
+<table>
+<thead><tr>
+<th>任务</th>
+<th>预测对象</th>
+<th>标签形式</th>
+<th>输出含义</th>
+<th>常用损失</th>
+</tr></thead><tbody>
+<tr>
+<td>多变量回归</td>
+<td>多个连续值</td>
+<td><code>[2.3, 7.8, 10.1]</code></td>
+<td>数值大小</td>
+<td>MSE/MAE</td>
+</tr>
+<tr>
+<td>多分类</td>
+<td>一个离散类别</td>
+<td><code>[0,1,0]</code></td>
+<td>各类别概率</td>
+<td>交叉熵</td>
+</tr>
+</tbody></table>
+<p>一句话：多变量回归是预测多个数值，多分类是从多个类别中选一个。</p>
+</section>
+<section class="section" id="backprop"><h2>4. 梯度计算与反向传播 <span class="tag important">重点</span></h2>
+<p>确定损失函数后，训练就变成优化问题：</p>
+<div class="formula">
+$$
+\min_\theta \mathcal L(\theta,D)
+$$
+</div>
+<p>最常见的参数更新形式是：</p>
+<div class="formula">
+$$
+\theta_{t+1}=\theta_t-\eta_t\nabla \mathcal L(\theta_t,D)
+$$
+</div>
+<p>其中 <code>eta_t</code> 是学习率，梯度告诉参数应该往哪个方向调整。</p>
+<h3>为什么需要反向传播</h3>
+<p>MLP 是多层复合函数。直接对每一层参数从头求导会重复计算大量中间项。反向传播利用链式法则，从输出层往输入层递推梯度，把中间梯度复用起来。</p>
+<p>对单个样本损失 <code>ell(theta,x,y)</code>，第 <code>l</code> 层参数梯度可以写成：</p>
+<div class="formula">
+$$
+\frac{\partial \ell}{\partial \theta^{(l)}}
+=
+\frac{\partial \ell}{\partial z^{(l)}}
+\frac{\partial z^{(l)}}{\partial \theta^{(l)}}
+$$
+</div>
+<p>常把：</p>
+<div class="formula">
+$$
+\delta^{(l)}=\frac{\partial \ell}{\partial z^{(l)}}
+$$
+</div>
+<p>称为第 <code>l</code> 层误差信号。它可以从后一层递推回来：</p>
+<div class="formula">
+$$
+\delta^{(l)}
+=
+\left(W^{(l+1)}\right)^T\delta^{(l+1)}
+\odot \sigma&#x27;(z^{(l)})
+$$
+</div>
+<p>于是：</p>
+<div class="formula">
+$$
+\frac{\partial \ell}{\partial W^{(l)}}=\delta^{(l)}(x^{(l-1)})^T,
+\qquad
+\frac{\partial \ell}{\partial b^{(l)}}=\delta^{(l)}
+$$
+</div>
+<p>直觉上：</p>
+<ul>
+<li>前向传播：保存每层的 <code>z</code> 和 <code>x</code>；</li>
+<li>反向传播：从损失出发，逐层往回算 <code>delta</code>；</li>
+<li>参数更新：用每层的 <code>delta</code> 和上一层输出得到梯度。</li>
+</ul>
+<details>
+<summary>展开：梯度爆炸与梯度消失的链式法则来源</summary>
+<p>反向传播本质上会出现多个矩阵和激活函数导数的连乘：</p>
+<div class="formula">
+$$
+\delta^{(l)}
+\approx
+D^{(l)}
+\left(W^{(l+1)}\right)^T
+D^{(l+1)}
+\left(W^{(l+2)}\right)^T
+\cdots
+\delta^{(L)}
+$$
+</div>
+<p>其中：</p>
+<div class="formula">
+$$
+D^{(l)}=\operatorname{diag}(\sigma&#x27;(z^{(l)}))
+$$
+</div>
+<p>如果这些连乘项的范数长期小于 1，梯度会越来越小，形成梯度消失；如果长期大于 1，梯度会越来越大，形成梯度爆炸。激活函数选择、初始化、归一化、残差结构等技术都在不同程度上缓解这个问题。</p>
+</details>
+</section>
+<section class="section" id="data"><h2>5. 数据准备 <span class="tag important">重点/了解</span></h2>
+<h3>数据归一化 <span class="tag know">了解</span></h3>
+<p>数据归一化是把不同量纲或不同取值范围的特征变到可比较尺度上，避免大数值特征主导训练。</p>
+<p>常见方法：</p>
+<p>标准化：</p>
+<div class="formula">
+$$
+z_{i,j}=\frac{x_{i,j}-\mu_j}{\sigma_j}
+$$
+</div>
+<p>Min-Max 归一化：</p>
+<div class="formula">
+$$
+z_{i,j}=\frac{x_{i,j}-\min_j}{\max_j-\min_j}
+$$
+</div>
+<p>归一化的直观作用是让优化路径更平滑，减少梯度下降中的 zigzag，提高训练稳定性。</p>
+<h3>数据增强 <span class="tag important">重点</span></h3>
+<p>数据增强通过对原始样本进行变换构造更多训练样本，从而扩大训练分布、提升泛化能力。</p>
+<p>图像任务常见增强：</p>
+<ul>
+<li>翻转、旋转、缩放、平移、裁剪；</li>
+<li>加噪声、颜色空间变换、对比度调整、锐化；</li>
+<li>图像擦除：抹掉一部分区域，迫使模型关注其他有效信息；</li>
+<li>图像混合：混合多个样本，模拟多目标或多标签场景。</li>
+</ul>
+<p>文本任务常见增强：</p>
+<ul>
+<li>回译：中文翻译成英文再翻回中文；</li>
+<li>同义词替换；</li>
+<li>随机插入、随机交换、随机删除。</li>
+</ul>
+<p>数据增强不是改变标签含义，而是在保持语义基本不变的前提下增加样本多样性。</p>
+<h3>类型转换 <span class="tag know">了解</span></h3>
+<p>神经网络通常需要连续数值输入，因此其他数据要转成数值形式：</p>
+<ul>
+<li>二分类标签可转为 <code>0/1</code> 或 <code>-1/+1</code>；</li>
+<li>多分类标签常用 one-hot 编码；</li>
+<li>文本可用词袋模型、one-hot 序列、Embedding 等表示。</li>
+</ul>
+<p>一个样本通常指一条数据：图像任务里是一张图片，文本任务里是一句话或一段文本，表格任务里是一行记录。一个 batch 是一批样本。</p>
+<p>通道（channel）可以理解为同一样本的不同特征层。RGB 图片有 3 个通道；卷积网络中间层的 64 个通道可以理解为 64 张特征图。</p>
+</section>
+<section class="section" id="dropout"><h2>6. Dropout 丢弃层 <span class="tag important">重点</span></h2>
+<p>Dropout 是一种缓解过拟合的正则化方法。训练时，它会以一定概率随机丢弃部分神经元，使这些神经元的输出变为 0，从而避免模型过度依赖某些特定神经元。</p>
+<p>设保留概率为 <code>p</code>：</p>
+<div class="formula">
+$$
+r_i^{(l)}\sim \operatorname{Bernoulli}(p)
+$$
+</div>
+<p>训练时对第 <code>l</code> 层输出做随机掩码：</p>
+<div class="formula">
+$$
+\tilde x^{(l)}=r^{(l)}\odot x^{(l)}
+$$
+</div>
+<p>再传给下一层：</p>
+<div class="formula">
+$$
+z^{(l+1)}=W^{(l+1)}\tilde x^{(l)}+b^{(l+1)}
+$$
+</div>
+<h3>为什么测试时要缩放</h3>
+<p>训练时某个神经元有概率 <code>p</code> 被保留，有概率 <code>1-p</code> 被丢弃。因此它对下一层的平均贡献是：</p>
+<div class="formula">
+$$
+\mathbb E[\tilde x]=p x+(1-p)\cdot 0=px
+$$
+</div>
+<p>测试时通常不再随机丢弃神经元，而是使用完整网络做稳定预测。如果直接全部保留，下一层收到的信号规模会比训练时平均情况更大。所以测试时要把输出乘以 <code>p</code>：</p>
+<div class="formula">
+$$
+\tilde x=px
+$$
+</div>
+<p>这样测试时传递给下一层的平均数值规模就和训练时 Dropout 后的期望输出对齐。</p>
+<p>例如 <code>p=0.5</code>，训练时某个神经元输出 <code>14</code>，它的平均贡献是：</p>
+<div class="formula">
+$$
+0.5\times 14 + 0.5\times 0 = 7
+$$
+</div>
+<p>测试时不随机丢弃，但把输出缩放为：</p>
+<div class="formula">
+$$
+14\times 0.5=7
+$$
+</div>
+<p>一句话总结：Dropout 训练时随机失活神经元，测试时保留全部神经元但按保留概率缩放输出，使完整网络的输出尺度与训练时的期望输出一致。</p>
+</section>
+<section class="section" id="normalization"><h2>7. 归一化层 <span class="tag know">了解</span></h2>
+<p>神经网络训练过程中，前层参数变化会导致后层输入分布不断变化，训练变得不稳定。归一化层通过标准化中间激活值来稳定训练、加快收敛。</p>
+<h3>批归一化 Batch Normalization</h3>
+<p>BatchNorm 通常对每个特征维度，在一个 mini-batch 上计算均值和方差：</p>
+<div class="formula">
+$$
+\mu_B=\frac1m\sum_{i=1}^m x_i,\qquad
+\sigma_B^2=\frac1m\sum_{i=1}^m(x_i-\mu_B)^2
+$$
+</div>
+<p>标准化：</p>
+<div class="formula">
+$$
+\hat x_i=\frac{x_i-\mu_B}{\sqrt{\sigma_B^2+\epsilon}}
+$$
+</div>
+<p>再引入可学习缩放和平移：</p>
+<div class="formula">
+$$
+y_i=\gamma \hat x_i+\beta
+$$
+</div>
+<p>为什么要加 <code>gamma</code> 和 <code>beta</code>？因为纯标准化可能削弱网络表达能力，加入可学习参数后，模型可以自己决定保留多少标准化效果。</p>
+<p>测试阶段不能依赖当前 batch 的随机统计量，通常使用训练过程中累计的滑动平均均值和方差。</p>
+<h3>层归一化 Layer Normalization</h3>
+<p>LayerNorm 对每个样本的一整层特征计算均值和方差，不跨 batch。</p>
+<p>如果输入是图像特征：</p>
+<div class="formula">
+$$
+N\times C\times H\times W
+$$
+</div>
+<p>LayerNorm 通常对每个样本的 <code>C x H x W</code> 一起归一化。它适用于任意 batch size，在 NLP 和 Transformer 中很常见。</p>
+<h3>实例归一化 Instance Normalization</h3>
+<p>InstanceNorm 对每一个样本、每一个通道，单独在 <code>H x W</code> 空间范围内归一化。</p>
+<p>对图像特征：</p>
+<div class="formula">
+$$
+x\in \mathbb R^{N\times C\times H\times W}
+$$
+</div>
+<p>InstanceNorm 的均值和方差为：</p>
+<div class="formula">
+$$
+\mu_{n,c}=\frac1{HW}\sum_{h,w}x_{n,c,h,w}
+$$
+</div>
+<div class="formula">
+$$
+\sigma^2_{n,c}=\frac1{HW}\sum_{h,w}(x_{n,c,h,w}-\mu_{n,c})^2
+$$
+</div>
+<p>然后：</p>
+<div class="formula">
+$$
+\hat x_{n,c,h,w}=
+\frac{x_{n,c,h,w}-\mu_{n,c}}{\sqrt{\sigma^2_{n,c}+\epsilon}}
+$$
+</div>
+<p>它常用于图像风格迁移，因为每个样本每个通道的均值和方差往往包含亮度、对比度、纹理风格等信息。</p>
+<h3>BN、LN、IN 对比</h3>
+<table>
+<thead><tr>
+<th>方法</th>
+<th>对谁归一化</th>
+<th>是否跨通道</th>
+<th>是否跨 batch</th>
+<th>常见场景</th>
+</tr></thead><tbody>
+<tr>
+<td>BatchNorm</td>
+<td>每个通道，在 <code>N x H x W</code> 上</td>
+<td>不跨通道</td>
+<td>跨 batch</td>
+<td>CNN、大 batch</td>
+</tr>
+<tr>
+<td>LayerNorm</td>
+<td>每个样本，在 <code>C x H x W</code> 上</td>
+<td>跨通道</td>
+<td>不跨 batch</td>
+<td>Transformer、小 batch</td>
+</tr>
+<tr>
+<td>InstanceNorm</td>
+<td>每个样本每个通道，在 <code>H x W</code> 上</td>
+<td>不跨通道</td>
+<td>不跨 batch</td>
+<td>风格迁移、图像生成</td>
+</tr>
+</tbody></table>
+<p>一句话：BN 看一批样本的同一通道，LN 看一个样本的整层特征，IN 看一个样本的一个通道。</p>
+</section>
+<section class="section" id="initialization"><h2>8. 初始化 <span class="tag important">重点</span></h2>
+<p>好的参数初始化对神经网络训练很关键。初始化过大容易梯度爆炸，初始化过小容易梯度消失，全 0 初始化会导致同一层神经元完全对称，学不到不同特征。</p>
+<h3>为什么不能全 0 初始化</h3>
+<p>如果同一层所有神经元权重完全相同，它们前向传播输出相同，反向传播梯度也相同，参数更新后仍然相同。这样一层多个神经元等价于一个神经元，模型容量被浪费。</p>
+<h3>Xavier 初始化</h3>
+<p>Xavier 初始化主要适合 tanh、sigmoid 等近似对称或近似线性的激活函数。目标是让前向传播和反向传播时的方差都尽量稳定。</p>
+<p>前向传播希望：</p>
+<div class="formula">
+$$
+\sigma_W^2\approx \frac1{n_{l-1}}
+$$
+</div>
+<p>因为第 <code>l</code> 层每个神经元接收来自上一层 <code>n_{l-1}</code> 个输入。</p>
+<p>反向传播希望：</p>
+<div class="formula">
+$$
+\sigma_W^2\approx \frac1{n_l}
+$$
+</div>
+<p>折中得到：</p>
+<div class="formula">
+$$
+\sigma_W^2=\frac{2}{n_l+n_{l-1}}
+$$
+</div>
+<p>如果使用均匀分布：</p>
+<div class="formula">
+$$
+W\sim U[-r,r]
+$$
+</div>
+<p>由于均匀分布方差为：</p>
+<div class="formula">
+$$
+\operatorname{Var}(W)=\frac{r^2}{3}
+$$
+</div>
+<p>令：</p>
+<div class="formula">
+$$
+\frac{r^2}{3}=\frac{2}{n_l+n_{l-1}}
+$$
+</div>
+<p>得到：</p>
+<div class="formula">
+$$
+r=\sqrt{\frac{6}{n_l+n_{l-1}}}
+$$
+</div>
+<p>所以：</p>
+<div class="formula">
+$$
+W\sim U\left[-\sqrt{\frac{6}{n_l+n_{l-1}}},
+\sqrt{\frac{6}{n_l+n_{l-1}}}\right]
+$$
+</div>
+<h3>He 初始化</h3>
+<p>ReLU 及其变体会把一部分负半轴输出变为 0，通常更适合 He 初始化：</p>
+<div class="formula">
+$$
+\sigma_W^2=\frac{2}{n_{l-1}}
+$$
+</div>
+<p>直觉上，ReLU 会让一部分激活失效，因此需要更大的初始方差维持信号规模。</p>
+<details>
+<summary>展开：Xavier 初始化的方差传播直觉</summary>
+<p>考虑无偏置线性层：</p>
+<div class="formula">
+$$
+z^{(l)}=W^{(l)}x^{(l-1)}
+$$
+</div>
+<p>假设输入各维度独立同分布，均值为 0，方差为 <code>sigma_x^2</code>；权重独立同分布，均值为 0，方差为 <code>sigma_W^2</code>。则单个输出维度的方差近似为：</p>
+<div class="formula">
+$$
+\operatorname{Var}(z_i^{(l)})
+\approx n_{l-1}\sigma_W^2\sigma_x^2
+$$
+</div>
+<p>如果希望输出方差和输入方差接近，就需要：</p>
+<div class="formula">
+$$
+n_{l-1}\sigma_W^2\approx 1
+$$
+</div>
+<p>所以前向传播给出：</p>
+<div class="formula">
+$$
+\sigma_W^2\approx \frac1{n_{l-1}}
+$$
+</div>
+<p>反向传播从当前层向上一层传回梯度时，会涉及当前层输出维度 <code>n_l</code>，类似得到：</p>
+<div class="formula">
+$$
+\sigma_W^2\approx \frac1{n_l}
+$$
+</div>
+<p>两者折中，就是 Xavier 初始化。</p>
+</details>
+</section>
+<section class="section" id="optimizers"><h2>9. 优化器 <span class="tag important">重点</span></h2>
+<p>深度学习中通常不用完整批量梯度下降，而是用 mini-batch 随机梯度下降及其变体。原因是完整数据集梯度计算成本太高，且神经网络目标函数往往非凸。</p>
+<h3>SGD</h3>
+<p>随机梯度下降每次从训练集取一个 mini-batch，计算平均梯度：</p>
+<div class="formula">
+$$
+g_t=\frac1m\sum_{(x_i,y_i)\in D_m}\nabla \ell(\theta_t,x_i,y_i)
+$$
+</div>
+<p>更新：</p>
+<div class="formula">
+$$
+\theta_{t+1}=\theta_t-\eta_t g_t
+$$
+</div>
+<p>其中 <code>m</code> 表示 mini-batch 大小，不是总训练集大小。</p>
+<h3>Momentum</h3>
+<p>普通 SGD 只看当前梯度，容易抖动。Momentum 引入速度变量，保留历史方向：</p>
+<div class="formula">
+$$
+v_t=\beta v_{t-1}+g_t
+$$
+</div>
+<div class="formula">
+$$
+\theta_{t+1}=\theta_t-\eta_t v_t
+$$
+</div>
+<p>直觉上，Momentum 像给梯度下降加了惯性：如果连续多步方向一致，就加速；如果方向来回震荡，就相互抵消。</p>
+<h3>AdaGrad</h3>
+<p>AdaGrad 根据历史梯度平方累计值调节每个参数的学习率：</p>
+<div class="formula">
+$$
+s_t=s_{t-1}+g_t\odot g_t
+$$
+</div>
+<div class="formula">
+$$
+\theta_{t+1}=\theta_t-\frac{\eta}{\sqrt{s_t}+\epsilon}g_t
+$$
+</div>
+<p>缺点是 <code>s_t</code> 只增不减，训练后期学习率可能过小。</p>
+<h3>RMSProp</h3>
+<p>RMSProp 把 AdaGrad 的累加改成指数滑动平均：</p>
+<div class="formula">
+$$
+s_t=\beta s_{t-1}+(1-\beta)g_t\odot g_t
+$$
+</div>
+<p>这样能持续追踪最近梯度平方规模，而不是让分母无限增大。</p>
+<h3>Adam</h3>
+<p>Adam 可以看作 Momentum 和 RMSProp 的结合，维护两个变量：</p>
+<div class="formula">
+$$
+m_t=\beta_1m_{t-1}+(1-\beta_1)g_t
+$$
+</div>
+<div class="formula">
+$$
+v_t=\beta_2v_{t-1}+(1-\beta_2)g_t\odot g_t
+$$
+</div>
+<p>其中：</p>
+<ul>
+<li><code>m_t</code> 是一阶动量，记录梯度方向的指数滑动平均；</li>
+<li><code>v_t</code> 是二阶动量，记录梯度平方的指数滑动平均；</li>
+<li><code>t</code> 是第几次更新，用于偏差修正。</li>
+</ul>
+<p>由于通常初始化：</p>
+<div class="formula">
+$$
+m_0=0,\qquad v_0=0
+$$
+</div>
+<p>训练初期 <code>m_t</code> 和 <code>v_t</code> 会被 0 拉小，所以 Adam 做偏差修正：</p>
+<div class="formula">
+$$
+\hat m_t=\frac{m_t}{1-\beta_1^t}
+$$
+</div>
+<div class="formula">
+$$
+\hat v_t=\frac{v_t}{1-\beta_2^t}
+$$
+</div>
+<p>最后更新：</p>
+<div class="formula">
+$$
+\theta_{t+1}
+=
+\theta_t-\frac{\eta_t}{\sqrt{\hat v_t}+\epsilon}\hat m_t
+$$
+</div>
+<h4>Adam 中 <code>v_t</code> 是希望逐渐增长吗</h4>
+<p>不是。<code>v_t</code> 的目标不是越来越大，而是估计最近一段时间梯度平方的平均大小。</p>
+<p>如果最近梯度平方变大，<code>v_t</code> 会变大；如果最近梯度平方变小，<code>v_t</code> 也会慢慢变小。它的作用是放在分母里，为每个参数自动调整实际步长：</p>
+<ul>
+<li><code>v_t</code> 大：说明这个参数最近梯度经常大，实际步长变小；</li>
+<li><code>v_t</code> 小：说明这个参数最近梯度较小，实际步长相对变大。</li>
+</ul>
+<p>一句话理解 Adam：</p>
+<div class="formula">
+$$
+m_t:\text{往哪个方向走},\qquad
+v_t:\text{每个参数走多大步}
+$$
+</div>
+<h3>AMSGrad</h3>
+<p>Adam 中 <code>v_t</code> 是滑动平均，可能下降。一旦 <code>v_t</code> 下降，分母变小，实际学习率会突然变大，训练可能不稳定。</p>
+<p>AMSGrad 的核心修改是：</p>
+<div class="formula">
+$$
+\hat v_t=\max(\hat v_{t-1},v_t)
+$$
+</div>
+<p>这里的 <code>max</code> 是逐元素取最大值。它记录到目前为止出现过的最大二阶动量，使分母不下降：</p>
+<div class="formula">
+$$
+\theta_{t+1}
+=
+\theta_t-\frac{\eta_t}{\sqrt{\hat v_t}+\epsilon}m_t
+$$
+</div>
+<p>这样实际学习率不会突然变大，收敛稳定性更好。</p>
+</section>
+<section class="section" id="weight-decay"><h2>10. 权重衰减 <span class="tag important">重点</span></h2>
+<p>权重衰减（Weight Decay）是一种正则化方法，用来限制权重过大，降低过拟合风险。</p>
+<p>常见形式是在损失函数中加入 L2 正则项：</p>
+<div class="formula">
+$$
+\mathcal L_{\text{total}}(\theta)
+=
+\mathcal L(\theta)+\frac{\lambda}{2}\|\theta\|_2^2
+$$
+</div>
+<p>梯度更新变成：</p>
+<div class="formula">
+$$
+\theta_{t+1}
+=
+\theta_t-\eta(\nabla \mathcal L(\theta_t)+\lambda\theta_t)
+$$
+</div>
+<p>等价于：</p>
+<div class="formula">
+$$
+\theta_{t+1}
+=(1-\eta\lambda)\theta_t-\eta\nabla \mathcal L(\theta_t)
+$$
+</div>
+<p>所以叫权重衰减：每次更新时先让权重按比例缩小一点。</p>
+<h3>AdamW</h3>
+<p>在 Adam 这类自适应优化器中，直接把 L2 正则项加进梯度，会受到自适应分母影响，导致正则化效果不够直观。AdamW 把权重衰减和梯度更新解耦：</p>
+<div class="formula">
+$$
+\theta_{t+1}
+=
+(1-\eta\lambda)\theta_t
+-
+\frac{\eta}{\sqrt{\hat v_t}+\epsilon}\hat m_t
+$$
+</div>
+<p>直觉：先按比例衰减权重，再用 Adam 的自适应梯度更新。</p>
+</section>
+<section class="section" id="lr"><h2>11. 学习率技巧 <span class="tag important">重点</span></h2>
+<p>学习率控制每一步走多远。学习率太大可能震荡甚至发散，太小则收敛慢、容易卡住。</p>
+<h3>固定衰减</h3>
+<p>常见策略是在训练早期使用较大学习率，后期逐渐调小：</p>
+<ul>
+<li>分段衰减：每隔若干 epoch 乘一个系数；</li>
+<li>指数衰减：每一步按指数比例变小；</li>
+<li>余弦衰减：学习率按余弦曲线平滑下降。</li>
+</ul>
+<h3>Warmup 预热</h3>
+<p>训练最开始模型参数和梯度都不稳定，直接用大学习率可能造成剧烈震荡。Warmup 在前 <code>T</code> 步逐渐增大学习率：</p>
+<div class="formula">
+$$
+\eta_t=\frac{t}{T}\eta_0,\qquad t=1,\dots,T
+$$
+</div>
+<p>预热结束后再执行正常学习率衰减。</p>
+<h3>周期性学习率</h3>
+<p>周期性学习率让学习率在上下界之间周期变化。直觉是：偶尔增大学习率，有助于跳出局部最优或鞍点区域；随后再降低学习率精细收敛。</p>
+</section>
+<section class="section" id="survey"><h2>12. 其他内容简单带过</h2>
+<h3>神经元与感知机</h3>
+<p>McCulloch-Pitts 神经元是早期人工神经元模型，权重固定，不涉及学习。感知机可以根据误分类样本更新参数，但只能处理线性可分问题，无法解决 XOR 这类线性不可分任务。</p>
+<h3>通用近似定理</h3>
+<p>只含一个隐藏层的 MLP，在合适激活函数和足够神经元数量下，可以任意精度逼近紧集上的连续函数。但“能表示”不等于“能学到”，训练仍依赖损失函数、优化器、初始化和数据。</p>
+<h3>深度与宽度</h3>
+<p>增加宽度可以增强表达能力，增加深度也能更高效地表示某些函数。实践中，深层网络往往比浅层网络更强，但训练难度也更高。</p>
+<h3>模型评估与超参数</h3>
+<p>训练后需要用验证集或测试集评估泛化效果。常见超参数包括学习率、batch size、层数、隐藏单元数、Dropout 保留概率、权重衰减系数等。</p>
+</section>
+<section class="section" id="summary"><h2>13. 一页速记</h2>
+<ul>
+<li><code>theta</code>：模型所有可学习参数，包括各层 <code>W</code> 和 <code>b</code>。</li>
+<li>激活函数：提供非线性；ReLU 常用，Sigmoid/Tanh 易梯度消失。</li>
+<li>多变量回归：预测多个连续值，常用 MSE。</li>
+<li>多分类：预测类别概率，Softmax + 交叉熵。</li>
+<li>反向传播：链式法则 + 复用中间梯度。</li>
+<li>Dropout：训练随机丢弃神经元，测试保留全部但缩放输出匹配训练期望。</li>
+<li>BN：跨 batch 统计；LN：每个样本整层统计；IN：每个样本每个通道统计。</li>
+<li>Xavier：适合 tanh/sigmoid，方差约 <code>2/(n_l+n_{l-1})</code>。</li>
+<li>He：适合 ReLU，方差约 <code>2/n_{l-1}</code>。</li>
+<li>Adam：<code>m_t</code> 管方向，<code>v_t</code> 管自适应步长，偏差修正解决初期估计偏小。</li>
+<li>AMSGrad：用历史最大二阶动量，避免实际学习率突然变大。</li>
+<li>权重衰减：让权重变小，缓解过拟合；AdamW 将衰减和自适应梯度更新解耦。</li>
+<li>学习率技巧：衰减、Warmup、周期性学习率。</li>
+</ul>
+</section>
+      <div class="footer">由 neural-network-foundations-notes.md 生成，可直接上传到 GitHub Pages。</div>
+    </main>
+  </div>
+  <script>
+    const links = Array.from(document.querySelectorAll('nav a'));
+    const sections = links.map(a => document.querySelector(a.getAttribute('href'))).filter(Boolean);
+    const activate = () => {
+      let current = sections[0];
+      for (const section of sections) {
+        if (section.getBoundingClientRect().top <= 120) current = section;
+      }
+      links.forEach(a => a.classList.toggle('active', a.getAttribute('href') === '#' + current.id));
+    };
+    document.addEventListener('scroll', activate, { passive: true });
+    activate();
+  </script>
+</body>
+</html>
