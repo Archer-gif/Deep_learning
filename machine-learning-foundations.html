@@ -1,0 +1,616 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>机器学习基础复习笔记</title>
+  <script>
+    window.MathJax = {
+      tex: { inlineMath: [['\\(', '\\)']], displayMath: [['\\[', '\\]']] },
+      svg: { fontCache: 'global' }
+    };
+  </script>
+  <script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
+  <style>
+    :root {
+      --bg: #f6f7fb;
+      --paper: #ffffff;
+      --ink: #20242c;
+      --muted: #667085;
+      --line: #dfe3ea;
+      --nav: #14213d;
+      --nav-soft: #22345f;
+      --accent: #c62828;
+      --accent-soft: #fff1f1;
+      --blue: #246bfe;
+      --green: #17805b;
+      --shadow: 0 14px 34px rgba(20, 33, 61, 0.12);
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      color: var(--ink);
+      background: var(--bg);
+      font-family: "Microsoft YaHei", "PingFang SC", "Noto Sans CJK SC", Arial, sans-serif;
+      line-height: 1.72;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 280px minmax(0, 1fr);
+      min-height: 100vh;
+    }
+
+    aside {
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      overflow: auto;
+      background: var(--nav);
+      color: #fff;
+      padding: 24px 18px;
+      border-right: 1px solid rgba(255,255,255,0.08);
+    }
+
+    .brand {
+      padding: 6px 8px 18px;
+      border-bottom: 1px solid rgba(255,255,255,0.14);
+      margin-bottom: 16px;
+    }
+
+    .brand h1 {
+      margin: 0 0 8px;
+      font-size: 24px;
+      line-height: 1.18;
+      letter-spacing: 0;
+    }
+
+    .brand p {
+      margin: 0;
+      color: rgba(255,255,255,0.74);
+      font-size: 13px;
+    }
+
+    nav a {
+      display: block;
+      color: rgba(255,255,255,0.84);
+      text-decoration: none;
+      padding: 8px 10px;
+      border-radius: 6px;
+      font-size: 14px;
+    }
+
+    nav a:hover,
+    nav a.active {
+      background: var(--nav-soft);
+      color: #fff;
+    }
+
+    main {
+      min-width: 0;
+      padding: 28px;
+    }
+
+    .hero {
+      background: linear-gradient(120deg, #ffffff 0%, #f4f8ff 100%);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+      padding: 28px;
+      margin-bottom: 22px;
+    }
+
+    .hero h2 {
+      margin: 0 0 10px;
+      font-size: 34px;
+      letter-spacing: 0;
+      line-height: 1.16;
+    }
+
+    .hero p {
+      max-width: 860px;
+      color: var(--muted);
+      margin: 0;
+    }
+
+    .priority {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+      margin-top: 20px;
+    }
+
+    .priority div {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fff;
+      padding: 14px;
+      min-height: 116px;
+    }
+
+    .priority strong {
+      display: inline-flex;
+      align-items: center;
+      min-height: 26px;
+      color: var(--accent);
+    }
+
+    .section {
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: 0 8px 24px rgba(20, 33, 61, 0.06);
+      padding: 24px;
+      margin-bottom: 18px;
+    }
+
+    h2 {
+      margin: 0 0 16px;
+      font-size: 26px;
+      line-height: 1.25;
+      letter-spacing: 0;
+    }
+
+    h3 {
+      margin: 24px 0 10px;
+      font-size: 19px;
+      letter-spacing: 0;
+    }
+
+    p { margin: 10px 0; }
+    ul, ol { padding-left: 22px; }
+
+    .tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      min-height: 24px;
+      padding: 2px 8px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 700;
+      margin-left: 8px;
+      vertical-align: middle;
+    }
+
+    .tag.important { color: var(--accent); background: var(--accent-soft); border: 1px solid #ffd3d3; }
+    .tag.know { color: var(--green); background: #eefaf5; border: 1px solid #cdeedf; }
+    .tag.pass { color: var(--blue); background: #eef4ff; border: 1px solid #d5e2ff; }
+
+    .formula {
+      overflow-x: auto;
+      background: #fbfcff;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 12px 14px;
+      margin: 12px 0;
+    }
+
+    .note {
+      border-left: 4px solid var(--accent);
+      background: var(--accent-soft);
+      padding: 12px 14px;
+      border-radius: 0 8px 8px 0;
+      margin: 14px 0;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    .mini {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 14px;
+      background: #fff;
+    }
+
+    .mini h3 { margin-top: 0; }
+
+    details {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 12px 14px;
+      margin: 14px 0;
+      background: #fcfdff;
+    }
+
+    summary {
+      cursor: pointer;
+      font-weight: 700;
+      color: var(--nav);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 12px 0;
+      overflow: hidden;
+      border-radius: 8px;
+    }
+
+    th, td {
+      border: 1px solid var(--line);
+      padding: 10px 12px;
+      text-align: left;
+      vertical-align: top;
+    }
+
+    th { background: #f1f4f9; }
+
+    .steps {
+      counter-reset: step;
+      padding: 0;
+      list-style: none;
+    }
+
+    .steps li {
+      position: relative;
+      padding-left: 42px;
+      margin: 12px 0;
+      min-height: 30px;
+    }
+
+    .steps li::before {
+      counter-increment: step;
+      content: counter(step);
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      color: #fff;
+      background: var(--nav);
+      display: grid;
+      place-items: center;
+      font-weight: 700;
+      font-size: 13px;
+    }
+
+    .footer {
+      color: var(--muted);
+      font-size: 13px;
+      text-align: center;
+      padding: 20px;
+    }
+
+    @media (max-width: 920px) {
+      .layout { grid-template-columns: 1fr; }
+      aside {
+        position: relative;
+        height: auto;
+      }
+      nav {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 4px;
+      }
+      main { padding: 16px; }
+      .priority, .grid { grid-template-columns: 1fr; }
+      .hero h2 { font-size: 28px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="layout">
+    <aside>
+      <div class="brand">
+        <h1>机器学习基础</h1>
+        <p>第二章 + 第三章复习页</p>
+      </div>
+      <nav id="toc">
+        <a href="#overview">总览</a>
+        <a href="#definition">机器学习定义</a>
+        <a href="#linear">线性回归</a>
+        <a href="#pac">假设空间与 PAC</a>
+        <a href="#vc">VC 维</a>
+        <a href="#rad">Rademacher</a>
+        <a href="#generalization">泛化上界</a>
+        <a href="#fit">过拟合与正则化</a>
+        <a href="#logistic">逻辑回归与分类</a>
+        <a href="#pca">PCA</a>
+        <a href="#kmeans">k-means</a>
+        <a href="#survey">了解项</a>
+        <a href="#build">网页怎么做</a>
+      </nav>
+    </aside>
+
+    <main>
+      <section class="hero" id="overview">
+        <h2>机器学习基础复习笔记</h2>
+        <p>按截图优先级整理：红色内容重点掌握，黑色内容了解即可，未在图中出现的知识只作背景补充。数学推导放在可展开区域，需要时再看。</p>
+        <div class="priority">
+          <div><strong>重点</strong><p>线性回归、假设空间、VC 维、Rademacher、过拟合/欠拟合、逻辑回归、二/多分类、PCA、k-means。</p></div>
+          <div><strong>了解</strong><p>机器学习定义、PAC、泛化性、经验风险最小化、没有免费午餐、正则化、岭回归与 Lasso。</p></div>
+          <div><strong>带过</strong><p>SVM、罕见类、半监督、主动学习、集成学习、迁移学习、验证集、估计等。</p></div>
+        </div>
+      </section>
+
+      <section class="section" id="definition">
+        <h2>1. 机器学习的定义 <span class="tag know">了解</span></h2>
+        <p>机器学习关注如何构建能够利用经验自动改进的程序。Mitchell 的定义可以记成：</p>
+        <div class="formula">\[
+        \text{经验 }E \rightarrow \text{性能 }P\text{ 在任务 }T\text{ 上提升}
+        \]</div>
+        <p>常见类型：监督学习有特征和标签；无监督学习只有特征；强化学习通过交互获得奖励反馈。</p>
+      </section>
+
+      <section class="section" id="linear">
+        <h2>2. 线性回归 <span class="tag important">重点</span></h2>
+        <p>线性回归用于预测连续值。它假设输入 \(x\in\mathbb R^d\) 与输出 \(y\in\mathbb R\) 近似满足线性关系：</p>
+        <div class="formula">\[
+        f(x)=w^\top x+b\approx y
+        \]</div>
+        <p>训练目标是最小化均方误差：</p>
+        <div class="formula">\[
+        \operatorname{MSE}(w,b)=\frac1m\sum_{i=1}^m(w^\top x_i+b-y_i)^2
+        \]</div>
+        <p>矩阵形式可写作 \(\min_w\|y-Xw\|_2^2\)。若 \(X^\top X\) 可逆，普通最小二乘解为：</p>
+        <div class="formula">\[
+        w^*=(X^\top X)^{-1}X^\top y
+        \]</div>
+        <p class="note">如果矩阵不可逆或病态，通常用正则化处理，这也引出后面的岭回归。</p>
+      </section>
+
+      <section class="section" id="pac">
+        <h2>3. 假设空间与 PAC <span class="tag important">重点</span></h2>
+        <h3>泛化误差与经验误差</h3>
+        <p>假设数据集 \(D=\{(x_i,y_i)\}_{i=1}^m\sim\mathcal D^m\)。泛化误差是真实分布上的错误率：</p>
+        <div class="formula">\[
+        E(h)=P_{(x,y)\sim\mathcal D}(h(x)\ne y)
+        \]</div>
+        <p>经验误差是数据集上的错误率：</p>
+        <div class="formula">\[
+        \hat E(h)=\frac1m\sum_{i=1}^m\mathbb I(h(x_i)\ne y_i)
+        \]</div>
+        <p>对于固定 \(h\)，有 \(\mathbb E_D[\hat E(h)]=E(h)\)。这表示经验误差是泛化误差的无偏估计，但前提是 \(h\) 固定。</p>
+
+        <h3>假设空间</h3>
+        <p>假设空间 \(\mathcal H\) 是学习算法允许选择的所有模型。若真实概念 \(c\in\mathcal H\)，问题可分；若 \(c\notin\mathcal H\)，问题不可分。</p>
+
+        <h3>PAC 与不可知 PAC</h3>
+        <p>PAC 希望模型以高概率达到足够小的误差：</p>
+        <div class="formula">\[
+        P(E(h)\le\epsilon)\ge1-\delta
+        \]</div>
+        <p>不可知 PAC 不要求可分，只要求学到的模型接近假设空间内最优模型：</p>
+        <div class="formula">\[
+        P\left(E(h)-\min_{h'\in\mathcal H}E(h')\le\epsilon\right)\ge1-\delta
+        \]</div>
+      </section>
+
+      <section class="section" id="vc">
+        <h2>4. VC 维 <span class="tag important">重点</span></h2>
+        <p>VC 维衡量二分类假设空间的表达能力。</p>
+        <h3>增长函数与打散</h3>
+        <div class="formula">\[
+        \mathcal H_D=\{(h(x_1),\dots,h(x_m)):h\in\mathcal H\}
+        \]</div>
+        <div class="formula">\[
+        \Pi_\mathcal H(m)=\max_{D:|D|=m}|\mathcal H_D|
+        \]</div>
+        <p>如果 \(|\mathcal H_D|=2^m\)，说明 \(D\) 上所有二分类标记都能实现，称 \(D\) 被打散。</p>
+        <p class="note">二分类时 \(m\) 个点最多是 \(2^m\) 种标记。若课件上下文是 \(m\) 个点但写成 \(\Pi_\mathcal H(m)=2\)，应理解为漏了上标 \(m\)。</p>
+        <h3>VC 维定义</h3>
+        <div class="formula">\[
+        \operatorname{VC}(\mathcal H)=\max\{m:\Pi_\mathcal H(m)=2^m\}
+        \]</div>
+        <p>线性分类器 \(h(x)=\operatorname{sign}(w^\top x+b)\)：齐次超平面 VC 维为 \(d\)，一般线性超平面 VC 维为 \(d+1\)。这里 \(d\) 是数据维度。</p>
+        <details>
+          <summary>展开：为什么齐次线性超平面的 VC 维是 d</summary>
+          <p>下界：取 \(d\) 个标准基向量 \(e_1,\dots,e_d\)。对任意标记 \(y_i\in\{-1,+1\}\)，令 \(w=(y_1,\dots,y_d)\)，则 \(w^\top e_i=y_i\)，所以能打散。</p>
+          <p>上界：任取 \(d+1\) 个向量，它们线性相关，存在不全为 0 的 \(a_i\) 使 \(\sum a_ix_i=0\)。把正系数集合记为 \(I\)，负系数集合记为 \(J\)，有：</p>
+          <div class="formula">\[
+          \sum_{i\in I}a_ix_i=\sum_{j\in J}|a_j|x_j
+          \]</div>
+          <p>若可打散，令 \(I\) 为正类、\(J\) 为负类，则存在 \(w\) 使 \(w^\top x_i>0\)，\(w^\top x_j<0\)。两边乘 \(w\) 得：</p>
+          <div class="formula">\[
+          0<\sum_{i\in I}a_ix_i^\top w=\sum_{j\in J}|a_j|x_j^\top w<0
+          \]</div>
+          <p>矛盾，所以不能打散任意 \(d+1\) 个点。</p>
+        </details>
+      </section>
+
+      <section class="section" id="rad">
+        <h2>5. Rademacher 复杂度 <span class="tag important">重点</span></h2>
+        <p>它衡量假设空间拟合随机噪声的能力。Rademacher 随机变量只取 \(-1\) 或 \(+1\)：</p>
+        <div class="formula">\[
+        P(\sigma_i=1)=P(\sigma_i=-1)=0.5
+        \]</div>
+        <p>经验 Rademacher 复杂度：</p>
+        <div class="formula">\[
+        \hat{\mathfrak R}_D(\mathcal F)=
+        \mathbb E_\sigma\left[
+        \sup_{f\in\mathcal F}\frac1m\sum_{i=1}^m\sigma_i f(x_i)
+        \right]
+        \]</div>
+        <p>如果对任意随机标签 \(\sigma\)，都有 \(h(x_i)=\sigma_i\)，则 \(\sigma_ih(x_i)=1\)，这个值达到 1，表示假设空间能完全拟合噪声。</p>
+        <table>
+          <tr><th>量</th><th>含义</th></tr>
+          <tr><td>增长函数/VC 维</td><td>能实现多少种标签组合，偏计数</td></tr>
+          <tr><td>Rademacher 复杂度</td><td>能和随机噪声对齐到什么程度，依赖具体数据</td></tr>
+        </table>
+      </section>
+
+      <section class="section" id="generalization">
+        <h2>6. 泛化上界与 ERM <span class="tag know">了解</span></h2>
+        <p>泛化上界的核心形式：</p>
+        <div class="formula">\[
+        E(h)\le \hat E(h)+\text{复杂度项}
+        \]</div>
+        <p>样本数越大，上界越紧；假设空间越复杂，上界越松；置信要求越高，上界也越松。</p>
+        <p>经验风险最小化：</p>
+        <div class="formula">\[
+        h^*\in\arg\min_{h\in\mathcal H}\hat E(h)
+        \]</div>
+        <details>
+          <summary>展开：一个 VC 泛化上界的读法</summary>
+          <div class="formula">\[
+          E(h)\le \hat E(h)+
+          \sqrt{
+          \frac{d(\log\frac{2m}{d}+1)+\log\frac4\delta}{m}
+          }
+          \]</div>
+          <p>\(d\) 是 VC 维，\(m\) 是样本数，\(\delta\) 是失败概率。它不说真实误差一定等于右边，只说以高概率不超过这个上界。</p>
+        </details>
+      </section>
+
+      <section class="section" id="fit">
+        <h2>7. 过拟合、欠拟合与正则化 <span class="tag important">重点</span></h2>
+        <div class="grid">
+          <div class="mini">
+            <h3>欠拟合</h3>
+            <p>模型太简单，训练误差也高。常见处理：增加特征、提高模型容量、减少过强正则。</p>
+          </div>
+          <div class="mini">
+            <h3>过拟合</h3>
+            <p>训练误差低，但测试误差高。常见处理：增加数据、降低模型容量、正则化、交叉验证。</p>
+          </div>
+        </div>
+        <h3>没有免费午餐定理</h3>
+        <p>在所有可能的数据生成分布上平均，没有任何算法天然优于其他算法。因此必须引入偏好，例如线性、平滑、稀疏、低维结构。</p>
+        <h3>正则化</h3>
+        <div class="formula">\[
+        J(w)=\operatorname{MSE}(w,b)+\lambda R(w)
+        \]</div>
+        <table>
+          <tr><th>方法</th><th>正则项</th><th>效果</th></tr>
+          <tr><td>岭回归</td><td>\(\|w\|_2^2\)</td><td>缩小权重，缓解不可逆，通常不产生精确 0</td></tr>
+          <tr><td>Lasso</td><td>\(\|w\|_1\)</td><td>产生稀疏权重，可做特征选择</td></tr>
+          <tr><td>弹性网络</td><td>\(\alpha\|w\|_1+(1-\alpha)\|w\|_2^2\)</td><td>兼顾稀疏性和稳定性</td></tr>
+        </table>
+      </section>
+
+      <section class="section" id="logistic">
+        <h2>8. 逻辑回归与分类 <span class="tag important">重点</span></h2>
+        <h3>二分类</h3>
+        <div class="formula">\[
+        D=\{(x_i,y_i)\}_{i=1}^m,\quad x_i\in\mathbb R^d,\quad y_i\in\{-1,+1\}
+        \]</div>
+        <p>线性分类器为 \(h(x)=\operatorname{sign}(w^\top x+b)\)。</p>
+        <h3>逻辑回归</h3>
+        <p>\(p(y|x)\) 表示给定 \(x\) 时标签为 \(y\) 的条件概率：</p>
+        <div class="formula">\[
+        p(y|x)=\frac{1}{1+\exp(-y(w^\top x+b))}
+        \]</div>
+        <p>令 \(z=w^\top x+b\)，则 \(p(y=+1|x)=\frac1{1+\exp(-z)}\)，\(p(y=-1|x)=\frac1{1+\exp(z)}\)。</p>
+        <p>逻辑损失：</p>
+        <div class="formula">\[
+        \ell(w,b)=\sum_{i=1}^m\log(1+\exp(-y_i(w^\top x_i+b)))
+        \]</div>
+        <h3>多分类</h3>
+        <p>Softmax 形式：</p>
+        <div class="formula">\[
+        P(y=c|x)=
+        \frac{\exp(w_c^\top x+b_c)}
+        {\sum_{j=1}^k\exp(w_j^\top x+b_j)}
+        \]</div>
+        <p>也可通过一对多或一对一把多分类转成多个二分类问题。</p>
+      </section>
+
+      <section class="section" id="pca">
+        <h2>9. PCA 主成分分析 <span class="tag important">重点</span></h2>
+        <p>PCA 的目标是找到一组新的正交坐标轴，使数据在前几个方向上的方差最大，然后保留这些方向来降维。</p>
+        <h3>坐标轴旋转</h3>
+        <div class="formula">\[
+        x=WW^\top x=\sum_{i=1}^d w_i(w_i^\top x)
+        \]</div>
+        <p>\(w_i^\top x\) 是样本 \(x\) 在新坐标轴 \(w_i\) 上的坐标。新坐标为：</p>
+        <div class="formula">\[
+        y=W^\top x=(w_1^\top x,\dots,w_d^\top x)
+        \]</div>
+        <h3>优化目标</h3>
+        <p>协方差矩阵：</p>
+        <div class="formula">\[
+        C=\frac1m\sum_{i=1}^m(x_i-\bar x)(x_i-\bar x)^\top
+        \]</div>
+        <p>一维 PCA：</p>
+        <div class="formula">\[
+        \max_{\|w\|_2=1} w^\top Cw
+        \]</div>
+        <p>\(k\) 维 PCA：</p>
+        <div class="formula">\[
+        \max_{W^\top W=I}\operatorname{tr}(W^\top CW)
+        \]</div>
+        <p>解为协方差矩阵前 \(k\) 大特征值对应的特征向量。</p>
+      </section>
+
+      <section class="section" id="kmeans">
+        <h2>10. k-means 聚类 <span class="tag important">重点</span></h2>
+        <p>k-means 要找 \(k\) 个中心点，让每个样本到最近中心的平方距离总和最小：</p>
+        <div class="formula">\[
+        \min_{y_1,\dots,y_k}
+        \sum_{i=1}^{m}
+        \left[
+        \min_j \|x_i-y_j\|_2^2
+        \right]
+        \]</div>
+        <p>\(\|\cdot\|_2\) 的右下角 2 表示欧氏范数，右上角 2 表示距离平方。</p>
+        <ol class="steps">
+          <li>随机初始化 \(k\) 个中心。</li>
+          <li>把每个点分配给最近的中心。</li>
+          <li>把每个簇的中心更新为该簇样本均值。</li>
+          <li>重复直到收敛或达到迭代次数。</li>
+        </ol>
+        <p class="note">k-means 对初始化敏感；默认欧氏距离。若换成 \(L_1\) 距离并取中位数中心，对应 k-medians。</p>
+      </section>
+
+      <section class="section" id="survey">
+        <h2>11. 其他内容 <span class="tag pass">带过</span></h2>
+        <div class="grid">
+          <div class="mini"><h3>SVM</h3><p>核心是最大化分类间隔。软间隔处理噪声，核方法处理非线性可分。</p></div>
+          <div class="mini"><h3>罕见类</h3><p>类别不平衡时准确率会误导，可用重加权、重采样、SMOTE。</p></div>
+          <div class="mini"><h3>半监督学习</h3><p>标签少、无标签多。自训练和协同训练会使用伪标签，但要注意误差传播。</p></div>
+          <div class="mini"><h3>主动学习</h3><p>挑最值得标注的样本，例如模型最不确定的样本。</p></div>
+          <div class="mini"><h3>集成学习</h3><p>Bagging 主要降方差；Boosting 主要降偏差。</p></div>
+          <div class="mini"><h3>迁移学习</h3><p>用源域知识帮助目标域，常见做法是预训练后微调。</p></div>
+        </div>
+      </section>
+
+      <section class="section" id="build">
+        <h2>12. 这个网页怎么做 <span class="tag know">了解</span></h2>
+        <p>这个页面是一个单文件静态网页，结构类似课程笔记站点：</p>
+        <ol>
+          <li>先用 Markdown 整理章节、公式和重点。</li>
+          <li>写 `index.html`，用语义化标题和左侧目录组织内容。</li>
+          <li>用 CSS 设置版式、侧边栏、重点标签、表格和公式块。</li>
+          <li>用 HTML 原生的 `&lt;details&gt;` 和 `&lt;summary&gt;` 实现点击展开。</li>
+          <li>用 MathJax 渲染 LaTeX 公式。</li>
+          <li>本地检查后，可把文件上传到 GitHub Pages。</li>
+        </ol>
+        <details>
+          <summary>展开：发布到 GitHub Pages 的步骤</summary>
+          <ol>
+            <li>新建一个 GitHub 仓库，例如 `ml-notes`。</li>
+            <li>上传 `index.html`。</li>
+            <li>打开 Settings -> Pages。</li>
+            <li>Source 选择部署分支，例如 `main`，目录选 `/root`。</li>
+            <li>保存后访问 `https://你的用户名.github.io/ml-notes/`。</li>
+          </ol>
+        </details>
+      </section>
+
+      <div class="footer">生成于本地工作区：Markdown 与 HTML 可继续编辑、发布或打印。</div>
+    </main>
+  </div>
+
+  <script>
+    const links = Array.from(document.querySelectorAll('nav a'));
+    const sections = links.map(a => document.querySelector(a.getAttribute('href'))).filter(Boolean);
+    const activate = () => {
+      let current = sections[0];
+      for (const section of sections) {
+        if (section.getBoundingClientRect().top <= 120) current = section;
+      }
+      links.forEach(a => a.classList.toggle('active', a.getAttribute('href') === '#' + current.id));
+    };
+    document.addEventListener('scroll', activate, { passive: true });
+    activate();
+  </script>
+</body>
+</html>
