@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>生成模型复习笔记</title>
+  <title>深度视觉模型复习笔记</title>
   <script>
     window.MathJax = {
       tex: { inlineMath: [['$', '$']], displayMath: [['$$', '$$']] },
@@ -259,31 +259,32 @@
   <div class="layout">
     <aside>
       <div class="brand">
-        <h1>生成模型</h1>
-        <p>第九章复习笔记</p>
+        <h1>深度视觉模型</h1>
+        <p>第六章 + 第七章复习笔记</p>
       </div>
       <nav id="toc">
-        <a href="#overview">生成模型复习笔记</a>
+        <a href="#overview">深度视觉模型复习笔记</a>
         <a href="#priority">复习优先级</a>
-        <a href="#generative-goal">生成模型到底在学什么</a>
-        <a href="#vae-motivation">VAE 的核心动机</a>
-        <a href="#vae-math">VAE 的数学原理</a>
-        <a href="#vae-loss">VAE 损失函数：重建项和 KL 正则项</a>
-        <a href="#reparameterization">重参数化技巧</a>
-        <a href="#vae-generation">VAE 的生成能力与局限</a>
-        <a href="#gan">GAN 基本架构</a>
-        <a href="#diffusion-overview">Diffusion Model 总览</a>
-        <a href="#diffusion-denoiser">Diffusion 去噪模型设计</a>
-        <a href="#diffusion-training">Diffusion 训练流程</a>
-        <a href="#diffusion-inference">Diffusion 推理与条件生成</a>
-        <a href="#latent-diffusion">隐空间扩散与 Stable Diffusion</a>
-        <a href="#flow-matching">Flow Matching</a>
+        <a href="#image-cnn">图像表示与 CNN 动机</a>
+        <a href="#convolution">卷积计算</a>
+        <a href="#stride-padding">步长、填充与输出尺寸</a>
+        <a href="#receptive-field">感受野</a>
+        <a href="#pooling">池化层</a>
+        <a href="#conv-1x1">1x1 卷积</a>
+        <a href="#cnn-fc">CNN 结构与全连接过渡</a>
+        <a href="#classic-models">经典深度视觉模型</a>
+        <a href="#resnet">ResNet 结构</a>
+        <a href="#detection">目标检测基础</a>
+        <a href="#rcnn-yolo">R-CNN 到 YOLO 的核心改进</a>
+        <a href="#rpn-selective">RPN 与 Selective Search</a>
+        <a href="#segmentation">分割模型与上采样</a>
+        <a href="#survey">课件补充内容</a>
         <a href="#summary">一页速记</a>
       </nav>
     </aside>
     <main>
-<section class="hero" id="overview"><h1>生成模型复习笔记</h1>
-<blockquote>依据第九章《生成式模型》课件、重点截图，以及本轮关于 VAE 隐变量分布、KL 正则项、重参数化技巧、随机采样生成、文生图条件控制的问答整理。红色重点详写；黑色内容以“知道是什么、为什么出现”为主；课件中出现但重点图未列出的内容简单带过。</blockquote>
+<section class="hero" id="overview"><h1>深度视觉模型复习笔记</h1>
+<blockquote>依据第六章《深度视觉模型（一）》、第七章《深度视觉模型（二）》课件、重点截图，以及本轮关于 RGB 通道、多通道卷积、卷积核参数、激活函数、1x1 卷积、ResNet、RPN、上采样/转置卷积的问答整理。红色重点详写；黑色内容以“知道是什么、为什么出现”为主；课件中出现但重点图未列出的内容简单带过。</blockquote>
 </section>
 <section class="section" id="priority"><h2>0. 复习优先级</h2>
 <table>
@@ -294,819 +295,1008 @@
 </tr></thead><tbody>
 <tr>
 <td>重点</td>
-<td>VAE 数学原理、KL 正则项、重参数化技巧、Diffusion 的去噪模型设计与训练流程</td>
-<td>能讲清每个分布的含义、为什么要引入 Encoder、为什么 KL 是正则项、为什么重参数化后能反传、扩散模型到底训练什么</td>
+<td>卷积计算、步长、填充、感受野、池化层、ResNet 结构、mAP、IoU、R-CNN 到 YOLO 的核心改进、RPN、上采样技术</td>
+<td>会解释具体行为、公式含义、为什么能提升效率或效果</td>
 </tr>
 <tr>
 <td>了解</td>
-<td>GAN 的模型架构、生成器与判别器、损失函数与优化策略、Diffusion 的隐空间扩散</td>
-<td>能说清基本流程、训练目标、为什么 Stable Diffusion 要在隐空间里做扩散</td>
+<td>经典深度模型 VGG、GoogLeNet、AlexNet、FCN、UNet、视频视觉模型核心思想</td>
+<td>能说清模型解决了什么问题，主要结构特点是什么</td>
 </tr>
 <tr>
 <td>简单带过</td>
-<td>Flow Matching、Stable Diffusion 的应用意义、VAE/GAN/Diffusion/FM 的发展脉络</td>
-<td>知道名字、核心思想、和扩散模型的大致区别即可</td>
+<td>图像基础、RGB/HSL、传统特征、LeNet、SENet、DenseNet、MobileNet、EfficientNet、ViT、CAM、Mask R-CNN</td>
+<td>知道名字、作用和关键词即可</td>
 </tr>
 </tbody></table>
 </section>
-<section class="section" id="generative-goal"><h2>1. 生成模型到底在学什么 <span class="tag know">了解</span></h2>
-<p>生成模型的目标不是给图片分类，而是学习真实数据的分布。假设真实图像来自一个复杂分布：</p>
+<section class="section" id="image-cnn"><h2>1. 图像表示与 CNN 动机 <span class="tag know">了解</span></h2>
+<p>计算机眼中的图像不是连续画面，而是数字矩阵。灰度图可以看成一个二维矩阵；彩色图像通常有多个通道，最常见的是 RGB 三通道。</p>
+<p>RGB 图像中，一个像素可写成：</p>
 <div class="formula">
 $$
-p_{\text{data}}(x)
+(R,G,B)
 $$
 </div>
-<p>模型希望学到一个近似分布：</p>
-<div class="formula">
-$$
-p_\theta(x)\approx p_{\text{data}}(x)
-$$
-</div>
-<p>训练好以后，从模型分布中采样，就能得到新图像。课件这一章主要讲四类生成模型：</p>
+<p>每个通道常用 <code>0~255</code> 表示强度：</p>
 <ul>
-<li>VAE：把图像编码到隐空间，再从隐空间解码生成图像。</li>
-<li>GAN：生成器和判别器对抗训练，让生成图像越来越像真实图像。</li>
-<li>Diffusion Model：从真实图像逐步加噪，再学习从噪声逐步去噪生成图像。</li>
-<li>Flow Matching：学习从噪声分布到图像分布的连续传输路径。</li>
+<li><code>(255,0,0)</code> 表示红色最强、绿色和蓝色没有，所以是纯红。</li>
+<li><code>(0,255,0)</code> 是纯绿。</li>
+<li><code>(0,0,255)</code> 是纯蓝。</li>
+<li><code>(255,255,255)</code> 是白色。</li>
+<li><code>(0,0,0)</code> 是黑色。</li>
 </ul>
-<p>这章重点是 VAE 和 Diffusion。GAN 知道基本架构和博弈目标即可；Flow Matching 只需要知道它也是“从噪声到数据”的生成路线。</p>
+<p>课件里说的 <code>24</code> 位色深，就是每个通道 <code>8</code> 位：</p>
+<div class="formula">
+$$
+2^8=256,\qquad 256^3\approx 1670\text{万种颜色}
+$$
+</div>
+<p>HSL 是另一种更符合人直觉的颜色表示：<code>H</code> 表示色相，<code>S</code> 表示饱和度，<code>L</code> 表示亮度。它和 RGB 都能表示颜色，只是坐标系不同。</p>
+<h3>为什么图像不适合直接用全连接层</h3>
+<p>如果把图像展平成一维向量再接全连接层，会有两个明显问题：</p>
+<ul>
+<li>空间信息丢失：原本上下左右相邻的像素，被拉直后邻域关系不明显，模型很难直接知道局部边缘、纹理和形状。</li>
+<li>参数量爆炸：例如 <code>32 x 32 x 3 = 3072</code> 个输入，若接很多神经元，每个神经元都要连接全部输入；图像尺寸稍大，参数量会迅速变得很大。</li>
+</ul>
+<p>CNN 的核心思想就是利用图像的两个特点：</p>
+<ul>
+<li>局部连接：一个局部区域就足够识别边缘、角点、纹理等低级特征。</li>
+<li>权值共享：同一种边缘检测器在图像左上角有用，在右下角通常也有用，所以同一个卷积核可以扫完整张图。</li>
+</ul>
 </section>
-<section class="section" id="vae-motivation"><h2>2. VAE 的核心动机 <span class="tag important">重点</span></h2>
-<p>图像维度很高。例如一张 <code>256 x 256 x 3</code> 的彩色图像接近二十万维。直接在像素空间里随机采样，大多数结果都没有意义。</p>
-<p>VAE 的思路是：不要直接在高维像素空间里采样，而是学习一个低维隐空间。</p>
-<p>普通自编码器是：</p>
+<section class="section" id="convolution"><h2>2. 卷积计算 <span class="tag important">重点</span></h2>
+<p>卷积核是一个包含可学习权重的小矩阵。卷积计算的单步过程是：</p>
+<blockquote>卷积核覆盖输入图像的一小块区域，对应位置逐元素相乘，然后把乘积结果相加。</blockquote>
+<p>假设输入局部区域是：</p>
 <div class="formula">
 $$
-x \rightarrow \text{Encoder} \rightarrow z \rightarrow \text{Decoder} \rightarrow x&#x27;
+\begin{bmatrix}
+26 &amp; 120 \\
+56 &amp; 76
+\end{bmatrix}
 $$
 </div>
-<p>其中 <code>x</code> 是输入图像，<code>z</code> 是低维隐变量，<code>x&#x27;</code> 是重建图像。普通自编码器主要追求：</p>
+<p>卷积核是：</p>
 <div class="formula">
 $$
-x&#x27;\approx x
+\begin{bmatrix}
+1 &amp; 0 \\
+0 &amp; 1
+\end{bmatrix}
 $$
 </div>
-<p>问题是，普通自编码器通常把一张图压成一个确定的点：</p>
+<p>则该位置输出为：</p>
 <div class="formula">
 $$
-x_1\rightarrow z_1,\quad x_2\rightarrow z_2,\quad x_3\rightarrow z_3
+26\times1+120\times0+56\times0+76\times1=102
 $$
 </div>
-<p>这样隐空间可能是破碎的。Decoder 只见过训练样本对应的少数点，随机采一个没见过的 <code>z</code>，可能落在空白区域，生成结果就容易崩。</p>
-<p>VAE 的关键改动是：</p>
-<blockquote>Encoder 不输出一个确定向量，而是输出一个分布。</blockquote>
-<p>也就是：</p>
+<p>卷积核从左到右、从上到下滑动，每到一个位置都算一次，所有输出按空间位置排列，就得到一张新的特征图。</p>
+<h3>多通道卷积怎么计算</h3>
+<p>对于 RGB 图像，输入有 <code>3</code> 个通道。一个卷积核的深度必须和输入通道数一致，所以它不是单纯的 <code>3 x 3</code>，而是：</p>
 <div class="formula">
 $$
-q_\phi(z|x)=N(\mu,\sigma^2)
+3\times3\times3
 $$
 </div>
-<p>这里 <code>q_\phi(z|x)</code> 表示：给定图片 <code>x</code>，Encoder 认为它可能对应哪些隐变量 <code>z</code>。</p>
-<h3><code>q(z|x)</code> 是二维分布吗</h3>
-<p>不一定。它是几维，取决于你设定的隐变量 <code>z</code> 是几维。</p>
-<p>如果 latent dim = 2：</p>
+<p>可以理解成三片小卷积核：</p>
 <div class="formula">
 $$
-z=[z_1,z_2]
+W_R,\quad W_G,\quad W_B
 $$
 </div>
-<p>那么 <code>q(z|x)</code> 是二维高斯分布，采样一次就是一个二维点。</p>
-<p>如果 latent dim = 128：</p>
+<p>它们分别作用在红、绿、蓝通道上。计算时：</p>
 <div class="formula">
 $$
-z\in R^{128},\quad \mu\in R^{128},\quad \sigma\in R^{128}
+\text{输出}(i,j)=
+\sum R_{\text{区域}}W_R+
+\sum G_{\text{区域}}W_G+
+\sum B_{\text{区域}}W_B+b
 $$
 </div>
-<p>那么采样一次得到的是一个 128 维向量。课件中画二维通常只是为了方便可视化。</p>
-<p>实际 VAE 常用对角高斯：</p>
+<p>所以最后确实是把三个通道的卷积结果直接相加，但要注意：每个通道的“卷积结果”本身已经是加权求和。</p>
+<p>一般情况下，<code>W_R</code>、<code>W_G</code>、<code>W_B</code> 的数值不会一致。它们都是独立的可学习参数，训练时通过反向传播自动更新。</p>
+<h3>卷积层有哪些可学习参数</h3>
+<p>卷积层主要有两类可学习参数：</p>
+<ul>
+<li>卷积核权重 <code>W</code>：决定提取什么特征，例如边缘、纹理、颜色组合。</li>
+<li>偏置 <code>b</code>：每个输出特征图通常有一个偏置，卷积加权求和后给整张输出特征图每个位置都加同一个 <code>b</code>。</li>
+</ul>
+<p>如果一层有 <code>C_out</code> 个卷积核，就会输出 <code>C_out</code> 张特征图。卷积层的“深度”通常指输出通道数，也就是卷积核个数。</p>
+<h3>参数量为什么少</h3>
+<p>如果用全连接层处理 <code>224 x 224 x 3</code> 图像，并输出 <code>1000</code> 个神经元，参数量大约是：</p>
 <div class="formula">
 $$
-q_\phi(z|x)=N(\mu,\operatorname{diag}(\sigma^2))
+224\times224\times3\times1000=150528000
 $$
 </div>
-<p>意思是每个维度独立采样：</p>
+<p>如果用 <code>1000</code> 个 <code>3 x 3 x 3</code> 卷积核，参数量是：</p>
 <div class="formula">
 $$
-z_i\sim N(\mu_i,\sigma_i^2)
+3\times3\times3\times1000=27000
 $$
 </div>
+<p>差别来自权值共享：一个卷积核在所有空间位置复用同一组权重。</p>
 </section>
-<section class="section" id="vae-math"><h2>3. VAE 的数学原理 <span class="tag important">重点</span></h2>
-<p>VAE 的生成假设是：</p>
+<section class="section" id="stride-padding"><h2>3. 步长、填充与输出尺寸 <span class="tag important">重点</span></h2>
+<p>卷积层常见超参数有：</p>
+<ul>
+<li><code>kernel size</code>：卷积核尺寸，例如 <code>1 x 1</code>、<code>3 x 3</code>、<code>5 x 5</code>。</li>
+<li><code>stride</code>：步长，卷积核每次移动多少像素。</li>
+<li><code>padding</code>：填充，在输入边缘补多少圈像素，常见是补 <code>0</code>。</li>
+<li><code>depth / C_out</code>：卷积核数量，也就是输出通道数。</li>
+<li><code>bias</code>：偏置。</li>
+</ul>
+<h3>步长 stride</h3>
+<p>步长 <code>S</code> 表示卷积核每次滑动的距离。</p>
+<ul>
+<li><code>S=1</code>：逐像素滑动，输出更密，保留更多空间细节。</li>
+<li><code>S=2</code>：每次跳两个像素，输出尺寸变小，有下采样效果，计算量也更低。</li>
+</ul>
+<p>如果输入宽度为 <code>W</code>，卷积核尺寸为 <code>F</code>，步长为 <code>S</code>，没有 padding，则输出宽度为：</p>
 <div class="formula">
 $$
-z\sim p(z),\qquad x\sim p_\theta(x|z)
+W&#x27;=\frac{W-F}{S}+1
+$$
+</div>
+<p>这个结果通常要是整数，否则卷积核不能整齐滑过输入。</p>
+<h3>填充 padding</h3>
+<p>卷积不加 padding 时，边缘像素参与计算的次数少，并且输出尺寸会变小。为了保留边缘信息、控制输出尺寸，可以在输入周围补 <code>0</code>。</p>
+<p>加 padding 后，输出高宽为：</p>
+<div class="formula">
+$$
+H&#x27;=\frac{H-K+2P}{S}+1,\qquad
+W&#x27;=\frac{W-K+2P}{S}+1
 $$
 </div>
 <p>其中：</p>
 <ul>
-<li><code>p(z)</code>：先验分布，通常取标准正态分布 <code>N(0,I)</code>。</li>
-<li><code>p_\theta(x|z)</code>：Decoder 分布，表示给定隐变量 <code>z</code> 后生成图像 <code>x</code> 的概率。</li>
-<li><code>p_\theta(x)</code>：模型整体认为图像 <code>x</code> 出现的概率。</li>
+<li><code>H, W</code>：输入高和宽；</li>
+<li><code>K</code>：卷积核尺寸；</li>
+<li><code>P</code>：padding 大小；</li>
+<li><code>S</code>：stride；</li>
+<li><code>H&#x27;, W&#x27;</code>：输出高和宽。</li>
 </ul>
-<p>真正想最大化的是训练集中真实图像的似然：</p>
+<p>常见例子：<code>K=3, S=1, P=1</code> 时：</p>
 <div class="formula">
 $$
-\max_\theta \log p_\theta(x)
+H&#x27;=H,\qquad W&#x27;=W
 $$
 </div>
-<p>而：</p>
+<p>所以 <code>3 x 3</code> 卷积常配 <code>padding=1</code> 来保持空间尺寸不变。</p>
+<h3>卷积层参数量</h3>
+<p>若输入为：</p>
 <div class="formula">
 $$
-p_\theta(x)=\int p(z)p_\theta(x|z)\,dz
+C_{in}\times H\times W
 $$
 </div>
-<p>这句话的意思是：某张图 <code>x</code> 的概率，等于所有可能的 <code>z</code> 生成它的概率加起来。</p>
-<p>问题是这个积分很难算。<code>z</code> 可能是几十维或几百维的连续变量，直接从整个 <code>p(z)</code> 里取遍所有值几乎不可行。</p>
-<h3>为什么要引入 <code>q_\phi(z|x)</code></h3>
-<p>你之前理解的“缩小范围”是对的，但要再精确一点：</p>
-<blockquote><code>q_\phi(z|x)</code> 是训练时针对当前图片 <code>x</code> 的搜索分布，用来告诉模型哪些 <code>z</code> 更可能和这张图有关。</blockquote>
-<p>原本要从整个先验分布里考虑：</p>
+<p>卷积层有 <code>C_out</code> 个 <code>K x K</code> 卷积核，则权重参数量为：</p>
 <div class="formula">
 $$
-z\sim p(z)
+C_{out}\times C_{in}\times K\times K
 $$
 </div>
-<p>但对一张猫图来说，大部分随机 <code>z</code> 可能和这张猫没有关系。Encoder 于是输出：</p>
+<p>如果加偏置，偏置参数量为：</p>
 <div class="formula">
 $$
-q_\phi(z|x)
+C_{out}
 $$
 </div>
-<p>它相当于在说：当前这张图比较可能来自隐空间的这一小片区域。</p>
-<p>所以训练时变成：</p>
-<div class="formula">
-$$
-z\sim q_\phi(z|x)
-$$
-</div>
-<p>再把 <code>z</code> 交给 Decoder 重建 <code>x</code>。</p>
-<p>不过注意：<code>q_\phi(z|x)</code> 不是生成时用来采样的最终分布。生成时仍然用公共先验：</p>
-<div class="formula">
-$$
-z\sim p(z)=N(0,I)
-$$
-</div>
-<p><code>q_\phi(z|x)</code> 的作用是在训练中帮助 Decoder 学会隐空间到图像的对应关系。</p>
-<h3><code>p_\theta(z|x)</code> 和 <code>q_\phi(z|x)</code> 的区别</h3>
-<p>真实后验是：</p>
-<div class="formula">
-$$
-p_\theta(z|x)=\frac{p_\theta(x|z)p(z)}{p_\theta(x)}
-$$
-</div>
-<p>它表示：给定图片 <code>x</code>，最可能对应哪些隐变量 <code>z</code>。</p>
-<p>但它里面含有 <code>p_\theta(x)</code>，而 <code>p_\theta(x)</code> 又是那个算不动的积分，所以 <code>p_\theta(z|x)</code> 也算不动。</p>
-<p>于是 VAE 引入一个可训练的近似分布：</p>
-<div class="formula">
-$$
-q_\phi(z|x)\approx p_\theta(z|x)
-$$
-</div>
-<p>这就是“变分推断”，也是 VAE 中“变分”的来源。</p>
-<details>
-<summary>展开：ELBO 推导看不懂时怎么抓主线</summary>
-<p>我们想最大化：</p>
-<div class="formula">
-$$
-\log p_\theta(x)
-$$
-</div>
-<p>但它不好直接算。引入任意分布 <code>q_\phi(z|x)</code> 后，可以得到一个下界：</p>
-<div class="formula">
-$$
-\log p_\theta(x)\ge
-E_{q_\phi(z|x)}[\log p_\theta(x|z)]-
-KL(q_\phi(z|x)\|p(z))
-$$
-</div>
-<p>这个下界叫 ELBO。最大化 ELBO，就等价于间接提高 <code>log p_\theta(x)</code>。</p>
-<p>其中第一项：</p>
-<div class="formula">
-$$
-E_{q_\phi(z|x)}[\log p_\theta(x|z)]
-$$
-</div>
-<p>要求 Decoder 从采样到的 <code>z</code> 还原 <code>x</code>，所以对应重建项。</p>
-<p>第二项：</p>
-<div class="formula">
-$$
-KL(q_\phi(z|x)\|p(z))
-$$
-</div>
-<p>要求 Encoder 输出的分布靠近标准正态先验，所以对应 KL 正则项。</p>
-<p>训练时通常最小化负 ELBO：</p>
-<div class="formula">
-$$
-L_{\text{VAE}}
-=
--E_{q_\phi(z|x)}[\log p_\theta(x|z)]
-+
-KL(q_\phi(z|x)\|p(z))
-$$
-</div>
-<p>所以可以记成：</p>
-<div class="formula">
-$$
-\text{VAE Loss}=\text{重建损失}+\text{KL 正则项}
-$$
-</div>
-</details>
 </section>
-<section class="section" id="vae-loss"><h2>4. VAE 损失函数：重建项和 KL 正则项 <span class="tag important">重点</span></h2>
-<p>VAE 损失有两部分：</p>
+<section class="section" id="receptive-field"><h2>4. 感受野 <span class="tag important">重点</span></h2>
+<p>感受野指输出特征图上某个位置，能“看到”原始输入的多大区域。</p>
+<p>单层卷积中，如果卷积核大小为 <code>K x K</code>，那么一个输出位置的感受野就是 <code>K x K</code>。</p>
+<p>当多层 <code>K x K</code>、<code>stride=1</code> 的卷积堆叠时，感受野会逐层扩大。课件给出的简化公式是：</p>
 <div class="formula">
 $$
-L_{\text{VAE}}=L_{\text{recon}}+L_{\text{KL}}
+\text{感受野}=1+L(K-1)
 $$
 </div>
-<h3>重建损失管什么</h3>
-<p>重建损失负责让生成图像像原图：</p>
+<p>例如 <code>3</code> 层 <code>3 x 3</code> 卷积：</p>
 <div class="formula">
 $$
-x&#x27;\approx x
+1+3(3-1)=7
 $$
 </div>
-<p>实际图像任务中常用 MSE：</p>
+<p>也就是说，三层 <code>3 x 3</code> 卷积可以达到类似一层 <code>7 x 7</code> 卷积的感受野。</p>
+<h3>为什么 VGG 喜欢堆 3 x 3 卷积</h3>
+<p>三层 <code>3 x 3</code> 卷积和一层 <code>7 x 7</code> 卷积感受野相同，但参数更少，非线性更多。</p>
+<p>假设输入输出通道数都是 <code>C</code>：</p>
 <div class="formula">
 $$
-L_{\text{recon}}=\|x-x&#x27;\|^2
+3\text{层 }3\times3:\quad 3\times3\times3\times C^2=27C^2
 $$
 </div>
-<p>它追求的是“重建精度”。如果只有这项，模型会尽量把每张图的信息塞进 <code>z</code>，使 Decoder 还原得越像越好。</p>
-<h3>KL 散度为什么叫正则项</h3>
-<p>KL 正则项负责约束 Encoder 输出的分布：</p>
 <div class="formula">
 $$
-KL(q_\phi(z|x)\|p(z))
+1\text{层 }7\times7:\quad 7\times7\times C^2=49C^2
 $$
 </div>
-<p>通常：</p>
+<p>所以：</p>
 <div class="formula">
 $$
-p(z)=N(0,I)
+27C^2&lt;49C^2
 $$
 </div>
-<p>所以 KL 项的意思是：</p>
-<div class="formula">
-$$
-q_\phi(z|x)\quad \text{不要离}\quad N(0,I)\quad \text{太远}
-$$
-</div>
-<p>这就是课件里“正则项”的标准含义。更准确地说：</p>
-<ul>
-<li>生成精度项 = 重建损失。</li>
-<li>正则项 = KL 散度。</li>
-</ul>
-<p>如果课件某处让人感觉“生成精度也是正则项”，可以理解为它想表达“总损失里有两个约束”，但机器学习术语里真正的正则项通常指 KL 散度这一项。</p>
-<h3>为什么不能只要重建损失</h3>
-<p>如果只追求重建精度，模型会倾向于让：</p>
-<div class="formula">
-$$
-\sigma\rightarrow 0
-$$
-</div>
-<p>也就是每张图的分布退化成一个点。这样 VAE 又变回普通自编码器：</p>
-<div class="formula">
-$$
-x\rightarrow z\rightarrow x&#x27;
-$$
-</div>
-<p>隐空间重新变得破碎，随机采样时容易落到 Decoder 没见过的区域。</p>
-<p>KL 项的作用是防止这种退化：</p>
-<div class="formula">
-$$
-q_\phi(z|x)\approx N(0,I)
-$$
-</div>
-<p>这样训练集中不同图像对应的分布会被规整到同一个公共隐空间里，区域之间有更多重叠和过渡。</p>
-<h3>训练后不用 Encoder，那为什么还能生成</h3>
-<p>训练阶段：</p>
-<div class="formula">
-$$
-x_i\rightarrow q_\phi(z|x_i)\rightarrow z_i\rightarrow \text{Decoder}\rightarrow x_i&#x27;
-$$
-</div>
-<p>每张图确实对应不同的分布。但是 KL 项不断把这些分布往同一个标准正态分布拉：</p>
-<div class="formula">
-$$
-q_\phi(z|x_i)\approx N(0,I)
-$$
-</div>
-<p>所以 Decoder 在训练中学到的是：</p>
-<blockquote>标准正态隐空间里的不同区域，对应不同类型的图像。</blockquote>
-<p>训练结束后，Encoder 的整理工作已经完成。生成时直接：</p>
-<div class="formula">
-$$
-z\sim N(0,I),\qquad x=\text{Decoder}(z)
-$$
-</div>
-<p>这不是说“所有图片都来自同一个具体样本的分布”，而是说：从公共隐空间分布里随机抽一个坐标点，Decoder 把这个点翻译成图像。</p>
-<h3>抽歪一点会不会完全变成别的东西</h3>
-<p>理想情况下不会。VAE 的训练目标会推动隐空间变得平滑：</p>
-<div class="formula">
-$$
-z\text{ 稍微变化}\rightarrow x\text{ 稍微变化}
-$$
-</div>
-<p>原因有两个：</p>
-<ul>
-<li>Encoder 输出的是分布，不是点。同一张图附近的一团 <code>z</code> 都要能重建相似图像。</li>
-<li>KL 项让不同样本分布靠近公共正态分布，减少孤立点和空白区域。</li>
-</ul>
-<p>但这不是绝对保证。VAE 训练不好、KL 太弱或隐空间组织不理想时，仍然可能采到奇怪区域。</p>
-<details>
-<summary>展开：对角高斯 KL 的解析式</summary>
-<p>若：</p>
-<div class="formula">
-$$
-q_\phi(z|x)=N(\mu,\operatorname{diag}(\sigma^2)),\qquad p(z)=N(0,I)
-$$
-</div>
-<p>则 KL 有解析解：</p>
-<div class="formula">
-$$
-KL(q_\phi(z|x)\|p(z))
-=
-\frac{1}{2}\sum_i
-(\mu_i^2+\sigma_i^2-\log\sigma_i^2-1)
-$$
-</div>
-<p>代码里常用 <code>log_var=log(sigma^2)</code>，写成：</p>
-<div class="formula">
-$$
-L_{\text{KL}}
-=
--\frac{1}{2}\sum_i
-(1+\log\sigma_i^2-\mu_i^2-\sigma_i^2)
-$$
-</div>
-<p>两种写法本质一样。</p>
-</details>
+<p>更重要的是，三层卷积中间可以插入三次 ReLU，表达能力比单层大卷积更强。</p>
+<h3>扩张卷积简单带过</h3>
+<p>扩张卷积也叫空洞卷积，在卷积核采样点之间加入间隔，用较少参数获得更大感受野。例如 <code>3 x 3</code> 卷积在 dilation rate 增大后，可以覆盖更大的输入范围，常用于分割等需要大范围上下文的任务。</p>
 </section>
-<section class="section" id="reparameterization"><h2>5. 重参数化技巧 <span class="tag important">重点</span></h2>
-<p>VAE 训练时需要从 Encoder 输出的分布中采样：</p>
+<section class="section" id="pooling"><h2>5. 池化层 <span class="tag important">重点</span></h2>
+<p>池化层用于降低特征图空间尺寸，最常见的是最大池化 Max Pooling。</p>
+<p>例如 <code>2 x 2</code> 最大池化会在每个 <code>2 x 2</code> 区域中取最大值：</p>
 <div class="formula">
 $$
-z\sim N(\mu,\sigma^2)
+\begin{bmatrix}
+1 &amp; 3 \\
+2 &amp; 4
+\end{bmatrix}
+\rightarrow 4
 $$
 </div>
-<p>问题是，直接采样像一个黑盒：</p>
+<p>池化层的特点：</p>
+<ul>
+<li>没有可学习参数。</li>
+<li>会降低高宽，减少计算量。</li>
+<li>增大后续神经元的有效感受野。</li>
+<li>提供一定平移不变性：目标轻微移动时，池化后的响应可能仍然相近。</li>
+</ul>
+<p>池化层输出尺寸为：</p>
 <div class="formula">
 $$
-(\mu,\sigma)\rightarrow \text{sample}\rightarrow z
+H&#x27;=\frac{H-K}{S}+1,\qquad
+W&#x27;=\frac{W-K}{S}+1
 $$
 </div>
-<p>反向传播时很难知道 <code>\mu</code> 或 <code>\sigma</code> 变化一点，采样结果 <code>z</code> 会怎么变化。</p>
-<p>重参数化技巧把采样改写为：</p>
+<p>常见配置是：</p>
 <div class="formula">
 $$
-\epsilon\sim N(0,I)
+K=2,\quad S=2
 $$
 </div>
+<p>此时高宽约减半。</p>
+<h3>池化和 stride 卷积的关系</h3>
+<p>池化可以下采样，<code>stride&gt;1</code> 的卷积也可以下采样。现代 CNN 中经常用步长为 <code>2</code> 的卷积代替部分池化，因为卷积下采样是可学习的，而池化规则固定。</p>
+</section>
+<section class="section" id="conv-1x1"><h2>6. 1x1 卷积 <span class="tag important">重点</span></h2>
+<p><code>1 x 1</code> 卷积不看空间邻域，只看同一个空间位置上的所有通道。它的核心作用是：</p>
+<blockquote>在不改变高和宽的情况下，融合通道信息，并改变通道数。</blockquote>
+<p>假设输入是：</p>
 <div class="formula">
 $$
-z=\mu+\sigma\cdot \epsilon
+224\times224\times64
 $$
 </div>
-<p>随机性被移动到外部噪声 <code>\epsilon</code> 上，而 <code>\epsilon</code> 不依赖网络参数。</p>
-<h3>为什么这样就能算梯度</h3>
-<p>一次前向传播中，先随机采到一个 <code>\epsilon</code>。采到之后，在这一次计算图里它就是一个固定常数。</p>
+<p>在某一个空间位置 <code>(i,j)</code>，它其实有一个 <code>64</code> 维向量：</p>
+<div class="formula">
+$$
+[x_1,x_2,\dots,x_{64}]
+$$
+</div>
+<p>一个 <code>1 x 1</code> 卷积核的真实尺寸是：</p>
+<div class="formula">
+$$
+1\times1\times64
+$$
+</div>
+<p>它在该位置做：</p>
+<div class="formula">
+$$
+y=w_1x_1+w_2x_2+\dots+w_{64}x_{64}+b
+$$
+</div>
+<p>所以一个 <code>1 x 1</code> 卷积核产生一个输出通道。如果有 <code>16</code> 个 <code>1 x 1</code> 卷积核，输出就是：</p>
+<div class="formula">
+$$
+224\times224\times16
+$$
+</div>
+<h3>为什么 1x1 卷积可以降维</h3>
+<p>这里的“降维”指降低通道维度，不是降低图片高宽。</p>
 <p>例如：</p>
 <div class="formula">
 $$
-\epsilon=0.7
+14\times14\times480 \rightarrow 14\times14\times16
 $$
 </div>
-<p>则：</p>
+<p>本质上是在每个空间位置上做同一个小型全连接层：</p>
 <div class="formula">
 $$
-z=\mu+0.7\sigma
+480\text{维输入}\rightarrow16\text{维输出}
 $$
 </div>
-<p>这就是普通可导函数：</p>
+<p>输出通道数由 <code>1 x 1</code> 卷积核个数决定。用 <code>16</code> 个卷积核，就把每个位置的 <code>480</code> 维向量压成 <code>16</code> 维向量。</p>
+<h3>为什么 1x1 卷积能减少计算量</h3>
+<p>假设输入是 <code>14 x 14 x 480</code>，目标是经过 <code>5 x 5</code> 卷积得到 <code>48</code> 个输出通道。</p>
+<p>不使用 <code>1 x 1</code> 卷积：</p>
 <div class="formula">
 $$
-\frac{\partial z}{\partial \mu}=1,\qquad
-\frac{\partial z}{\partial \sigma}=\epsilon
+14\times14\times48\times5\times5\times480
 $$
 </div>
-<p>你之前问得很关键：<code>\partial z/\partial \sigma=\epsilon</code>，而 <code>\epsilon</code> 是随机的，怎么梯度下降？</p>
-<p>答案是：<strong>随机梯度不是不能用，它是对真实期望梯度的随机估计。</strong></p>
-<p>训练真正优化的是：</p>
+<p>约为 <code>112.9M</code> 次运算。</p>
+<p>先用 <code>1 x 1</code> 降到 <code>16</code> 通道：</p>
 <div class="formula">
 $$
-E_{z\sim N(\mu,\sigma^2)}[L(z)]
+14\times14\times16\times1\times1\times480
++14\times14\times48\times5\times5\times16
 $$
 </div>
-<p>重参数化后等价于：</p>
-<div class="formula">
-$$
-E_{\epsilon\sim N(0,I)}[L(\mu+\sigma\epsilon)]
-$$
-</div>
-<p>每次采一个或几个 <code>\epsilon</code>，就像 mini-batch SGD 每次只采一小批样本一样，用随机估计来更新参数。单次梯度会有噪声，但长期平均方向是对的。</p>
-<details>
-<summary>展开：一个一维例子说明随机梯度为什么可用</summary>
-<p>假设：</p>
-<div class="formula">
-$$
-L(z)=z^2,\qquad z=\mu+\sigma\epsilon
-$$
-</div>
-<p>则：</p>
-<div class="formula">
-$$
-L=(\mu+\sigma\epsilon)^2
-$$
-</div>
-<p>对 <code>\mu</code> 和 <code>\sigma</code> 求导：</p>
-<div class="formula">
-$$
-\frac{\partial L}{\partial \mu}=2(\mu+\sigma\epsilon)
-$$
-</div>
-<div class="formula">
-$$
-\frac{\partial L}{\partial \sigma}=2(\mu+\sigma\epsilon)\epsilon
-$$
-</div>
-<p>它们确实包含随机的 <code>\epsilon</code>。但取期望后：</p>
-<div class="formula">
-$$
-E[2(\mu+\sigma\epsilon)]=2\mu
-$$
-</div>
-<div class="formula">
-$$
-E[2(\mu+\sigma\epsilon)\epsilon]=2\sigma
-$$
-</div>
-<p>这正好是：</p>
-<div class="formula">
-$$
-E[z^2]=\mu^2+\sigma^2
-$$
-</div>
-<p>的真实梯度：</p>
-<div class="formula">
-$$
-\frac{\partial}{\partial\mu}=2\mu,\qquad
-\frac{\partial}{\partial\sigma}=2\sigma
-$$
-</div>
-<p>所以重参数化后的梯度虽然每次随机，但在统计意义上是正确的。</p>
-</details>
+<p>约为 <code>5.3M</code> 次运算。</p>
+<p>提升点在于：后面的 <code>5 x 5</code> 大卷积不再处理 <code>480</code> 个输入通道，而只处理 <code>16</code> 个输入通道。</p>
 </section>
-<section class="section" id="vae-generation"><h2>6. VAE 的生成能力与局限 <span class="tag know">了解</span></h2>
-<p>VAE 的生成流程是：</p>
+<section class="section" id="cnn-fc"><h2>7. CNN 结构与全连接过渡 <span class="tag important">重点</span></h2>
+<p>典型 CNN 结构常写成：</p>
 <div class="formula">
 $$
-z\sim N(0,I)
+\text{卷积}\rightarrow\text{激活}\rightarrow\text{池化}\rightarrow\dots\rightarrow\text{全连接}
 $$
 </div>
+<p>激活函数如 ReLU 是逐元素作用的。也就是说，卷积后得到一张矩阵，ReLU 会对矩阵中每个值单独处理：</p>
 <div class="formula">
 $$
-x=\text{Decoder}(z)
+\operatorname{ReLU}(x)=\max(0,x)
 $$
 </div>
-<p>它能生成训练集中没见过的新图像，是因为训练时 Decoder 已经学习了公共隐空间到图像空间的映射。</p>
-<p>但普通 VAE 生成不可控。你不知道哪个 <code>z</code> 精确对应“白猫”“汽车”“某种风格”。如果要控制生成，需要额外条件，例如类别标签或文本：</p>
+<p>例如：</p>
 <div class="formula">
 $$
-p_\theta(x|z,c)
+\begin{bmatrix}
+2 &amp; -1 &amp; 0\\
+5 &amp; -3 &amp; 4
+\end{bmatrix}
+\rightarrow
+\begin{bmatrix}
+2 &amp; 0 &amp; 0\\
+5 &amp; 0 &amp; 4
+\end{bmatrix}
 $$
 </div>
-<p>其中 <code>c</code> 是条件信息。</p>
-<p>VAE 另一个常见缺点是图像容易模糊。原因是像素级 MSE 倾向于平均多种可能结果。比如两张语义上都是猫的图，像素位置可能差很多，MSE 会鼓励模型生成平滑的折中结果。</p>
-<p>这也是课件随后引出 GAN 的原因：GAN 不只看像素误差，而是通过判别器学习“像不像真实图像”的分布级信号。</p>
+<p>如果卷积层输出很多通道，激活函数会对所有通道、所有位置逐元素作用。</p>
+<h3>进入全连接层前是否要展平</h3>
+<p>传统 CNN 中，卷积/池化输出通常是三维张量：</p>
+<div class="formula">
+$$
+C\times H\times W
+$$
+</div>
+<p>如果后面接全连接层，通常要先展平成一维向量：</p>
+<div class="formula">
+$$
+64\times7\times7=3136
+$$
+</div>
+<p>然后输入全连接层。</p>
+<p>不过现代网络也常用全局平均池化 GAP：</p>
+<div class="formula">
+$$
+64\times7\times7\rightarrow64
+$$
+</div>
+<p>每个通道求一个平均值，再接分类器。这样参数更少，也更不容易过拟合。</p>
 </section>
-<section class="section" id="gan"><h2>7. GAN 基本架构 <span class="tag know">了解</span></h2>
-<p>GAN 包含两个网络：</p>
+<section class="section" id="classic-models"><h2>8. 经典深度视觉模型 <span class="tag know">了解</span></h2>
+<p>这一部分重点图里是黑色，复习时主要掌握“模型解决了什么问题”。</p>
+<h3>LeNet 和 AlexNet</h3>
+<p>LeNet-5 是早期成功的 CNN，用于手写数字识别，由卷积、非线性激活、池化和全连接组成。</p>
+<p>AlexNet 是深度学习视觉模型的里程碑，在 ILSVRC 2012 中显著超过传统方法。关键词：</p>
 <ul>
-<li>生成器 <code>G</code>：输入随机噪声 <code>z</code>，输出假图像 <code>G(z)</code>。</li>
-<li>判别器 <code>D</code>：输入一张图，判断它是真图还是假图。</li>
+<li>更深的 CNN；</li>
+<li>使用 ReLU 缓解梯度消失；</li>
+<li>使用数据增强和 Dropout 防止过拟合；</li>
+<li>使用 GPU 加速训练；</li>
+<li>推动 ImageNet 时代的深度视觉模型发展。</li>
 </ul>
-<p>训练目标是对抗博弈：</p>
-<div class="formula">
-$$
-\min_G\max_D V(D,G)
-$$
-</div>
-<p>经典损失写作：</p>
-<div class="formula">
-$$
-V(D,G)
-=
-E_{x\sim p_{\text{data}}}[\log D(x)]
-+
-E_{z\sim p(z)}[\log(1-D(G(z)))]
-$$
-</div>
-<p>判别器希望：</p>
-<div class="formula">
-$$
-D(x)\rightarrow 1,\qquad D(G(z))\rightarrow 0
-$$
-</div>
-<p>生成器希望：</p>
-<div class="formula">
-$$
-D(G(z))\rightarrow 1
-$$
-</div>
-<p>训练时交替优化：</p>
+<h3>VGG</h3>
+<p>VGG 的设计思想是：</p>
+<blockquote>用小卷积核，堆更深的网络。</blockquote>
+<p>结构特点：</p>
 <ul>
-<li>固定 <code>G</code>，训练 <code>D</code> 区分真图和假图。</li>
-<li>固定 <code>D</code>，训练 <code>G</code> 让假图骗过 <code>D</code>。</li>
+<li>统一使用 <code>3 x 3</code> 卷积；</li>
+<li>卷积步长通常为 <code>1</code>；</li>
+<li>池化常用 <code>2 x 2, stride=2</code>；</li>
+<li>多个卷积后接一个池化；</li>
+<li>结构简单、规则、容易复现，常被用作特征提取骨架。</li>
 </ul>
-<p>当生成分布和真实分布完全一致时：</p>
-<div class="formula">
-$$
-p_G(x)=p_{\text{data}}(x)
-$$
-</div>
-<p>此时判别器无法区分真假：</p>
-<div class="formula">
-$$
-D(x)=\frac{1}{2}
-$$
-</div>
-<p>课件里还提到理论上最优判别器会把生成器目标转化为真实分布与生成分布之间的 JS 散度。复习时知道结论即可：GAN 的目标是让生成分布逼近真实图像分布。</p>
-</section>
-<section class="section" id="diffusion-overview"><h2>8. Diffusion Model 总览 <span class="tag important">重点</span></h2>
-<p>扩散模型的核心是两条过程：</p>
+<p>VGG 的缺点是参数量大，尤其是后面的全连接层很重。</p>
+<h3>GoogLeNet / Inception</h3>
+<p>GoogLeNet 的核心思想是 Inception 模块：</p>
+<blockquote>不确定该用 <code>1 x 1</code>、<code>3 x 3</code>、<code>5 x 5</code> 还是池化，那就在同一层并行使用，让网络自己学习不同尺度特征的重要性。</blockquote>
+<p>它的关键词：</p>
 <ul>
-<li>前向过程：从真实图像开始，逐步加噪，最后接近纯高斯噪声。</li>
-<li>反向过程：从纯噪声开始，逐步去噪，最后生成图像。</li>
+<li>Inception 模块并行提取多尺度特征；</li>
+<li>使用 <code>1 x 1</code> 卷积降维，减少后续大卷积计算量；</li>
+<li>用全局平均池化代替大规模全连接层；</li>
+<li>使用辅助分类器帮助中间层获得梯度，缓解深层训练困难。</li>
 </ul>
-<p>直观流程：</p>
-<div class="formula">
-$$
-x_0\rightarrow x_1\rightarrow x_2\rightarrow \cdots \rightarrow x_T
-$$
-</div>
-<p>其中 <code>x_0</code> 是真实图像，<code>x_T</code> 接近纯噪声。</p>
-<p>生成时反过来：</p>
-<div class="formula">
-$$
-x_T\rightarrow x_{T-1}\rightarrow \cdots \rightarrow x_0
-$$
-</div>
-<p>前向加噪可以直接人为定义，因为我们知道怎么加高斯噪声。难点是反向去噪：模型要学会每一步该去掉什么噪声。</p>
-<p>所以 Diffusion 的本质可以记成：</p>
-<blockquote>训练一个噪声预测网络，让它在任意时间步 <code>t</code> 看见含噪图 <code>x_t</code> 后，预测当初加进去的噪声。</blockquote>
-</section>
-<section class="section" id="diffusion-denoiser"><h2>9. Diffusion 去噪模型设计 <span class="tag important">重点</span></h2>
-<p>课件给出两个思路。</p>
-<p>思路一：直接预测加噪前图像。</p>
-<div class="formula">
-$$
-x_t\rightarrow \text{Model}\rightarrow x_{t-1}\ \text{或}\ x_0
-$$
-</div>
-<p>问题是图像分布复杂，猫、车、人脸、风景差异很大，直接预测干净图像学习难度高。</p>
-<p>思路二：预测噪声。</p>
-<div class="formula">
-$$
-x_t,t\rightarrow \epsilon_\theta(x_t,t)
-$$
-</div>
-<p>然后用预测噪声去还原更干净的图像。</p>
-<p>为什么预测噪声更容易？因为无论原图是什么，加入的噪声都来自高斯分布：</p>
-<div class="formula">
-$$
-\epsilon\sim N(0,I)
-$$
-</div>
-<p>噪声的统计规律比图像本身简单，模型更容易学习。</p>
-</section>
-<section class="section" id="diffusion-training"><h2>10. Diffusion 训练流程 <span class="tag important">重点</span></h2>
-<p>朴素做法是从 <code>x_0</code> 开始一步步加噪，同时训练模型预测每一步噪声。但这样有两个问题：</p>
-<ul>
-<li>训练顺序固定，前期只学低噪声，后期只学高噪声，优化不稳定。</li>
-<li>如果每次随机时间步 <code>t</code> 都要真的加噪 <code>t</code> 次，计算很浪费。</li>
-</ul>
-<p>改进做法是：随机采样时间步 <code>t</code>，并用闭式公式一步得到 <code>x_t</code>。</p>
-<p>常见前向加噪公式是：</p>
-<div class="formula">
-$$
-x_t=\sqrt{\bar{\alpha}_t}x_0+\sqrt{1-\bar{\alpha}_t}\epsilon
-$$
-</div>
-<p>其中：</p>
-<ul>
-<li><code>x_0</code>：干净图像。</li>
-<li><code>t</code>：随机采样的时间步。</li>
-<li><code>\epsilon\sim N(0,I)</code>：真实加入的噪声。</li>
-<li><code>\bar{\alpha}_t</code>：由噪声强度累计得到的系数，控制第 <code>t</code> 步保留多少原图信息。</li>
-</ul>
-<p>训练时，模型输入：</p>
-<div class="formula">
-$$
-(x_t,t)
-$$
-</div>
-<p>模型输出：</p>
-<div class="formula">
-$$
-\epsilon_\theta(x_t,t)
-$$
-</div>
-<p>损失函数是预测噪声和真实噪声的 L2 损失：</p>
-<div class="formula">
-$$
-L_{\text{diffusion}}
-=
-\|\epsilon-\epsilon_\theta(x_t,t)\|^2
-$$
-</div>
-<h3>训练流程一页版</h3>
-<ol>
-<li>从训练集中随机取一张图 <code>x_0</code>。</li>
-<li>随机采样时间步 <code>t</code>。</li>
-<li>随机采样高斯噪声 <code>\epsilon</code>。</li>
-<li>用公式一步构造含噪图 <code>x_t</code>。</li>
-<li>让模型根据 <code>x_t</code> 和 <code>t</code> 预测噪声。</li>
-<li>用 <code>\|\epsilon-\epsilon_\theta(x_t,t)\|^2</code> 更新模型。</li>
-</ol>
-<details>
-<summary>展开：为什么可以一步得到任意时间步的含噪图</summary>
-<p>每一步加噪可写成：</p>
-<div class="formula">
-$$
-x_t=\sqrt{\alpha_t}x_{t-1}+\sqrt{1-\alpha_t}\epsilon_t
-$$
-</div>
-<p>不断递归展开，可以得到：</p>
-<div class="formula">
-$$
-x_t=\sqrt{\bar{\alpha}_t}x_0+\sqrt{1-\bar{\alpha}_t}\epsilon
-$$
-</div>
-<p>其中：</p>
-<div class="formula">
-$$
-\bar{\alpha}_t=\prod_{s=1}^{t}\alpha_s
-$$
-</div>
-<p>关键点是：多个独立高斯噪声的线性组合仍然是高斯噪声，所以可以把多步噪声合并成一个新的 <code>\epsilon\sim N(0,I)</code>。</p>
-<p>这就是课件里“多步加噪变成单步加噪即可得到训练数据”的数学原因。</p>
-</details>
-</section>
-<section class="section" id="diffusion-inference"><h2>11. Diffusion 推理与条件生成 <span class="tag important">重点</span></h2>
-<p>推理阶段从纯噪声开始：</p>
-<div class="formula">
-$$
-x_T\sim N(0,I)
-$$
-</div>
-<p>然后循环执行：</p>
-<div class="formula">
-$$
-x_t\rightarrow x_{t-1}
-$$
-</div>
-<p>每一步模型预测当前噪声：</p>
-<div class="formula">
-$$
-\epsilon_\theta(x_t,t)
-$$
-</div>
-<p>再根据预测结果去掉一部分噪声。课件还提到，去噪后通常会加入一定随机噪声，这样可以增加生成多样性，也能缓解误差累积。</p>
-<h3>为什么普通扩散生成不可控</h3>
-<p>如果输入只有随机噪声：</p>
-<div class="formula">
-$$
-x_T\sim N(0,I)
-$$
-</div>
-<p>模型只能随机生成图像。它不知道你想要猫、车还是风景。</p>
-<p>要可控生成，就要加入条件：</p>
-<div class="formula">
-$$
-\epsilon_\theta(x_t,t,c)
-$$
-</div>
-<p>其中 <code>c</code> 可以是类别标签、文本向量、边缘图、深度图等。</p>
-<p>文生图时，文本不是直接变成一个 VAE 向量，而是作为条件参与每一步去噪：</p>
-<div class="formula">
-$$
-\text{prompt}\rightarrow \text{text encoder}\rightarrow c
-$$
-</div>
-<div class="formula">
-$$
-\epsilon_\theta(x_t,t,c)
-$$
-</div>
-<p>也就是说：</p>
-<blockquote>文本指导模型每一步“应该往哪个方向去噪”，最后随机噪声逐渐变成符合文字描述的图像。</blockquote>
-<p>这正好回答之前那个疑问：模型不是先知道某个隐空间向量精确对应“白猫”，而是在大量图文配对训练中学会“文本条件如何改变去噪方向”。</p>
-</section>
-<section class="section" id="latent-diffusion"><h2>12. 隐空间扩散与 Stable Diffusion <span class="tag important">重点/了解</span></h2>
-<p>普通扩散如果直接在像素空间做去噪，计算量很大。例如 <code>512 x 512</code> 图像有 262,144 个像素位置，还要多步迭代去噪，速度和显存压力都很高。</p>
-<p>Stable Diffusion 使用 Latent Diffusion 的思想：先用 VAE 把图像压到低维隐空间，再在隐空间里做扩散。</p>
-<p>大致流程：</p>
-<div class="formula">
-$$
-x\rightarrow \text{VAE Encoder}\rightarrow z
-$$
-</div>
-<p>在训练扩散模型时，对隐变量 <code>z</code> 加噪、预测噪声、计算损失。</p>
-<p>生成时：</p>
-<div class="formula">
-$$
-z_T\sim N(0,I)
-$$
-</div>
-<div class="formula">
-$$
-\text{text prompt}\rightarrow \text{text encoder}\rightarrow c
-$$
-</div>
-<div class="formula">
-$$
-z_T\rightarrow z_{T-1}\rightarrow\cdots\rightarrow z_0
-$$
-</div>
-<p>最后：</p>
-<div class="formula">
-$$
-z_0\rightarrow \text{VAE Decoder}\rightarrow x
-$$
-</div>
-<p>所以 Stable Diffusion 里，VAE 主要负责：</p>
-<div class="formula">
-$$
-\text{像素图像}\leftrightarrow \text{压缩隐空间}
-$$
-</div>
-<p>真正决定“根据文字生成什么”的，是文本编码器和条件去噪网络。</p>
-<p>这也解释了之前的问题：</p>
-<ul>
-<li>普通 VAE：从 <code>N(0,I)</code> 抽一个 <code>z</code>，Decoder 随机生成，不好控制。</li>
-<li>文生图扩散：从随机隐空间噪声开始，文本条件持续指导去噪，最终得到符合 prompt 的隐变量，再交给 VAE Decoder 解码。</li>
-</ul>
-</section>
-<section class="section" id="flow-matching"><h2>13. Flow Matching <span class="tag pass">简单带过</span></h2>
-<p>Flow Matching 也是从噪声生成图像，但它强调学习一条从噪声分布到数据分布的连续路径。</p>
-<p>课件中的直观说法是：</p>
-<div class="formula">
-$$
-x_0\rightarrow x_{0.25}\rightarrow x_{0.5}\rightarrow x_{0.75}\rightarrow x_1
-$$
-</div>
-<p>其中 <code>x_0</code> 来自噪声分布，<code>x_1</code> 来自图像分布。模型学习的是沿着路径把噪声搬运到图像的速度场或方向。</p>
-<p>只需要记住：</p>
-<ul>
-<li>Diffusion：常理解为多步加噪、再多步去噪。</li>
-<li>Flow Matching：直接学习从噪声到数据的连续传输路径。</li>
-<li>现在一些前沿生成模型会使用 Flow Matching 或相关思想。</li>
-</ul>
-</section>
-<section class="section" id="summary"><h2>14. 一页速记</h2>
+<p>一句话对比：</p>
 <table>
 <thead><tr>
 <th>模型</th>
-<th>核心思想</th>
-<th>重点记忆</th>
+<th>关键词</th>
 </tr></thead><tbody>
 <tr>
-<td>VAE</td>
-<td>Encoder 输出分布，Decoder 从隐变量生成图像</td>
-<td><code>Loss = 重建损失 + KL 正则项</code>；`q(z</td>
-<td>x)<code> 是训练时针对当前样本的近似后验；生成时从 </code>N(0,I)` 采样</td>
+<td>VGG</td>
+<td>简单、规则、深、参数量大</td>
 </tr>
 <tr>
-<td>GAN</td>
-<td>生成器和判别器对抗训练</td>
-<td><code>G</code> 想骗过 <code>D</code>，<code>D</code> 想区分真假；交替优化；理论目标是让 <code>p_G</code> 逼近 <code>p_data</code></td>
-</tr>
-<tr>
-<td>Diffusion</td>
-<td>先把图像加噪成高斯噪声，再学习反向去噪</td>
-<td>模型主要预测噪声；训练随机采样时间步；损失是预测噪声和真实噪声的 L2</td>
-</tr>
-<tr>
-<td>Stable Diffusion</td>
-<td>在 VAE 隐空间中做条件扩散</td>
-<td>文本不是直接变成图像向量，而是指导每一步去噪；最后用 VAE Decoder 解码</td>
-</tr>
-<tr>
-<td>Flow Matching</td>
-<td>学习从噪声到数据的传输路径</td>
-<td>知道概念即可：从噪声分布沿连续路径走向图像分布</td>
+<td>GoogLeNet</td>
+<td>多尺度、Inception、1x1 降维、高效轻量</td>
 </tr>
 </tbody></table>
-<p>最容易混的几个点：</p>
+</section>
+<section class="section" id="resnet"><h2>9. ResNet 结构 <span class="tag important">重点</span></h2>
+<p>普通深层网络继续加深时，理论上表达能力更强，但实际训练中可能表现更差，而且不一定是过拟合造成的。这通常和优化困难有关，例如梯度消失、梯度爆炸、深层网络难以学到恒等映射。</p>
+<p>ResNet 的核心做法是：</p>
+<blockquote>不直接让网络学习目标映射 <code>H(x)</code>，而是学习残差 <code>F(x)=H(x)-x</code>。</blockquote>
+<p>最后输出：</p>
+<div class="formula">
+$$
+H(x)=F(x)+x
+$$
+</div>
+<p>其中 <code>x</code> 通过跳跃连接 shortcut 直接加到后面。</p>
+<h3>为什么残差连接有用</h3>
+<p>如果某几层理想情况下只需要保持输入不变，也就是：</p>
+<div class="formula">
+$$
+H(x)\approx x
+$$
+</div>
+<p>普通网络必须自己学出完整的恒等映射。ResNet 中只需要：</p>
+<div class="formula">
+$$
+F(x)\approx0
+$$
+</div>
+<p>因为：</p>
+<div class="formula">
+$$
+H(x)=F(x)+x\approx x
+$$
+</div>
+<p>这让新增层至少可以近似“什么都不改”，所以加深网络时更容易优化。</p>
+<h3>梯度为什么更容易传</h3>
+<p>残差块输出为：</p>
+<div class="formula">
+$$
+y=F(x)+x
+$$
+</div>
+<p>反向传播时，梯度既可以经过卷积层 <code>F</code>，也可以沿着 shortcut 直接传回前面。直观理解：</p>
 <ul>
-<li><code>q_\phi(z|x)</code> 是 Encoder 给当前图片预测的隐变量分布，不是生成时最终使用的分布。</li>
-<li>生成时不用 Encoder，是因为训练时 KL 已经把各样本的隐变量分布规整到公共 <code>N(0,I)</code> 隐空间。</li>
-<li>KL 散度才是 VAE 的正则项；重建损失负责生成精度。</li>
-<li>重参数化后 <code>\epsilon</code> 虽然随机，但一次前向中可当常数；梯度是随机估计，可以用于 SGD。</li>
-<li>Diffusion 文生图不是“文字直接找到某个 z”，而是“文字条件指导随机噪声逐步去噪成目标图像”。</li>
+<li>普通网络：梯度要连续穿过很多卷积、激活和归一化层。</li>
+<li>ResNet：梯度多了一条更直接的路径。</li>
 </ul>
+<p>所以 ResNet 能训练非常深的网络，例如超过 <code>100</code> 层。</p>
+<h3>残差块在哪里用</h3>
+<p>残差结构最常见于卷积网络中间层，但思想不限于卷积层，全连接层也可以用。只要 <code>F(x)</code> 和 <code>x</code> 形状一致，就可以相加。</p>
+<p>如果形状不一致，例如通道数变了或高宽变了，就需要投影 shortcut：</p>
+<div class="formula">
+$$
+y=F(x)+W_sx
+$$
+</div>
+<p>其中 <code>W_s</code> 常用 <code>1 x 1</code> 卷积实现：</p>
+<ul>
+<li>对齐通道数：用 <code>1 x 1</code> 卷积改变 <code>C</code>。</li>
+<li>对齐空间尺寸：用 <code>stride=2</code> 下采样，让高宽减半。</li>
+</ul>
+<h3>目标输出怎么确定</h3>
+<p>训练时通常不会给每个残差块单独指定标准答案。真正的标准答案在整个模型最后，例如：</p>
+<ul>
+<li>图片分类：真实类别是猫、狗、车等。</li>
+<li>检测任务：真实框坐标和类别。</li>
+<li>分割任务：每个像素的真实类别。</li>
+</ul>
+<p>中间的 <code>H(x)</code> 和 <code>F(x)</code> 是模型为了降低最终损失自动学出来的表示，不需要人工标注。</p>
+</section>
+<section class="section" id="detection"><h2>10. 目标检测基础 <span class="tag important">重点</span></h2>
+<p>图像分类只回答：</p>
+<div class="formula">
+$$
+\text{图中是什么？}
+$$
+</div>
+<p>目标检测要回答：</p>
+<div class="formula">
+$$
+\text{图中有哪些物体？它们分别在哪里？}
+$$
+</div>
+<p>所以目标检测同时包含：</p>
+<ul>
+<li>分类：判断物体类别。</li>
+<li>定位：预测边界框 bounding box。</li>
+</ul>
+<h3>Bounding Box</h3>
+<p>边界框常见表示方式：</p>
+<table>
+<thead><tr>
+<th>格式</th>
+<th>含义</th>
+</tr></thead><tbody>
+<tr>
+<td>Pascal VOC</td>
+<td><code>(xmin, ymin, xmax, ymax)</code>，左上角和右下角坐标</td>
+</tr>
+<tr>
+<td>COCO</td>
+<td><code>(xmin, ymin, w, h)</code>，左上角坐标加宽高</td>
+</tr>
+<tr>
+<td>CXCYWH</td>
+<td><code>(x_center, y_center, w, h)</code>，中心点加宽高</td>
+</tr>
+</tbody></table>
+<h3>IoU</h3>
+<p>IoU 是交并比，用于衡量两个框重叠程度：</p>
+<div class="formula">
+$$
+\operatorname{IoU}=\frac{\text{预测框}\cap\text{真实框的面积}}{\text{预测框}\cup\text{真实框的面积}}
+$$
+</div>
+<p>IoU 越大，预测框和真实框越重合。</p>
+<p>常见用法：</p>
+<ul>
+<li>判断正负样本：例如 IoU 高于某阈值视为正样本。</li>
+<li>NMS 去重：两个预测框 IoU 太高时，保留置信度高的框。</li>
+<li>计算 mAP：不同 IoU 阈值下会得到不同 AP/mAP。</li>
+</ul>
+<h3>mAP</h3>
+<p>mAP 是 Mean Average Precision，平均精度均值，是目标检测常用评价指标。</p>
+<p>先理解几个概念：</p>
+<ul>
+<li>Precision 精确率：预测为正的框里，有多少是真的。</li>
+<li>Recall 召回率：真实目标里，有多少被找到了。</li>
+<li>PR 曲线：改变置信度阈值，得到不同 Precision 和 Recall，画成曲线。</li>
+<li>AP：某一类别的 PR 曲线下面积。</li>
+<li>mAP：所有类别 AP 的平均值。</li>
+</ul>
+<p>一句话：</p>
+<blockquote>mAP 同时考察分类是否正确，以及框的位置是否足够准。</blockquote>
+</section>
+<section class="section" id="rcnn-yolo"><h2>11. R-CNN 到 YOLO 的核心改进 <span class="tag important">重点</span></h2>
+<p>多目标检测的难点是：一张图里目标数量不固定，类别不同，尺度不同，还有遮挡和重叠。如果对所有位置、所有尺度、所有长宽比都滑窗分类，计算量会非常大。</p>
+<h3>R-CNN</h3>
+<p>R-CNN 的流程：</p>
+<ol>
+<li>用 Selective Search 生成约 <code>2000</code> 个候选区域 RoI。</li>
+<li>把每个 RoI 缩放到固定尺寸，例如 <code>224 x 224</code>。</li>
+<li>每个 RoI 单独送入 CNN 提取特征。</li>
+<li>用 SVM 判断类别。</li>
+<li>用边界框回归精修位置。</li>
+<li>用 NMS 去掉重复框。</li>
+</ol>
+<p>核心问题：</p>
+<ul>
+<li>每张图约 <code>2000</code> 个 RoI，每个 RoI 都要跑一次 CNN，速度极慢。</li>
+<li>RoI 大量重叠，卷积计算高度冗余。</li>
+<li>训练流程复杂，不是真正端到端。</li>
+</ul>
+<h3>Fast R-CNN</h3>
+<p>Fast R-CNN 的关键改进：</p>
+<blockquote>先对整张图跑一次 CNN，得到共享特征图，再把候选框映射到特征图上。</blockquote>
+<p>流程：</p>
+<ol>
+<li>整图输入 CNN，得到共享特征图。</li>
+<li>Selective Search 仍然生成候选框。</li>
+<li>将 RoI 映射到特征图上。</li>
+<li>用 RoI Pooling 把任意大小 RoI 变成固定大小特征。</li>
+<li>接分类头和边界框回归头。</li>
+</ol>
+<p>改进点：</p>
+<ul>
+<li>大幅减少重复卷积计算。</li>
+<li>可以端到端训练检测头。</li>
+<li>速度和精度都比 R-CNN 好。</li>
+</ul>
+<p>遗留问题：</p>
+<blockquote>Selective Search 仍然是外部 CPU 算法，不能训练，仍然慢。</blockquote>
+<h3>Faster R-CNN</h3>
+<p>Faster R-CNN 的关键改进：</p>
+<blockquote>用 RPN 替代 Selective Search，让候选框生成也变成可学习网络。</blockquote>
+<p>它把系统变成：</p>
+<div class="formula">
+$$
+\text{图像}\rightarrow\text{共享 CNN 特征图}\rightarrow
+\begin{cases}
+\text{RPN 生成候选框}\\
+\text{检测头分类和回归}
+\end{cases}
+$$
+</div>
+<p>提升点：</p>
+<ul>
+<li>RPN 和检测网络共享卷积特征。</li>
+<li>候选框生成可以在 GPU 上并行运行。</li>
+<li>候选框生成可学习，可和检测任务联合优化。</li>
+<li>实现更完整的端到端训练和推理。</li>
+</ul>
+<h3>YOLO</h3>
+<p>YOLO 是单阶段检测器。它不先生成候选框再分类，而是把检测看成密集预测：</p>
+<blockquote>一次前向传播，直接预测所有框和类别。</blockquote>
+<p>典型思想：</p>
+<ul>
+<li>将图像划分为 <code>S x S</code> 网格。</li>
+<li>每个网格预测若干框、置信度和类别概率。</li>
+<li>后处理时先置信度筛选，再做 NMS。</li>
+</ul>
+<p>YOLO 的优势是快，适合实时检测。早期 YOLO 的不足是小目标、密集目标检测较弱，因为主要依赖较深层、低分辨率特征。</p>
+<h3>R-CNN 系列到 YOLO 的主线</h3>
+<table>
+<thead><tr>
+<th>模型</th>
+<th>候选框来源</th>
+<th>核心改进</th>
+<th>主要问题</th>
+</tr></thead><tbody>
+<tr>
+<td>R-CNN</td>
+<td>Selective Search</td>
+<td>首次把 CNN 用到区域检测</td>
+<td>每个 RoI 单独跑 CNN，慢</td>
+</tr>
+<tr>
+<td>Fast R-CNN</td>
+<td>Selective Search</td>
+<td>整图共享卷积特征，RoI Pooling</td>
+<td>Selective Search 仍慢</td>
+</tr>
+<tr>
+<td>Faster R-CNN</td>
+<td>RPN</td>
+<td>候选框生成可学习，GPU 端到端</td>
+<td>两阶段，速度不如单阶段</td>
+</tr>
+<tr>
+<td>YOLO</td>
+<td>无显式候选框阶段</td>
+<td>一次前向直接预测框和类别</td>
+<td>早期小目标效果较弱</td>
+</tr>
+</tbody></table>
+</section>
+<section class="section" id="rpn-selective"><h2>12. RPN 与 Selective Search <span class="tag important">重点</span></h2>
+<p>Selective Search 和 RPN 都是在做区域提议 region proposal：先猜哪些区域可能有物体，再交给后续网络分类和精修。</p>
+<h3>Selective Search 的具体行为</h3>
+<p>Selective Search 是传统图像算法，不是神经网络。</p>
+<p>它大致这样做：</p>
+<ol>
+<li>先把图像切成很多小区域，类似超像素。</li>
+<li>根据颜色、纹理、大小、形状等相似性，把相邻小区域逐步合并。</li>
+<li>每合并出一个区域，就用它的外接矩形作为候选框。</li>
+<li>最后得到约几千个候选框，例如 R-CNN 中常用约 <code>2000</code> 个。</li>
+</ol>
+<p>它的特点：</p>
+<ul>
+<li>依赖手工规则和底层视觉特征。</li>
+<li>不知道“猫”“狗”“车”等高级语义。</li>
+<li>不能通过反向传播学习。</li>
+<li>通常跑在 CPU 上，速度慢。</li>
+</ul>
+<h3>RPN 的具体行为</h3>
+<p>RPN 是 Region Proposal Network，区域提议网络，是 Faster R-CNN 的核心。</p>
+<p>输入图像先经过 CNN backbone 得到特征图，例如：</p>
+<div class="formula">
+$$
+3\times640\times480\rightarrow512\times20\times15
+$$
+</div>
+<p>然后 RPN 在特征图每个空间位置上放置 <code>K</code> 个 anchor box。Anchor 是预设框，包含不同尺度和长宽比，例如：</p>
+<ul>
+<li>小框、中框、大框；</li>
+<li>横长框、竖长框、接近正方形框。</li>
+</ul>
+<p>对每个 anchor，RPN 同时预测两件事：</p>
+<ol>
+<li>Objectness：这个 anchor 是否包含物体，是前景还是背景。</li>
+<li>Box regression：这个 anchor 应该如何平移和缩放，才能更接近真实框。</li>
+</ol>
+<p>如果特征图大小为 <code>H x W</code>，每个位置有 <code>K</code> 个 anchor，则输出：</p>
+<div class="formula">
+$$
+K\times H\times W
+$$
+</div>
+<p>个物体性分数，以及：</p>
+<div class="formula">
+$$
+4K\times H\times W
+$$
+</div>
+<p>个边界框调整量。每个框的 <code>4</code> 个调整量通常是：</p>
+<div class="formula">
+$$
+dx,\quad dy,\quad dw,\quad dh
+$$
+</div>
+<p>推理时，RPN 会按 objectness 分数排序，保留高分框，再用 NMS 去掉高度重叠框，得到最终 proposals。</p>
+<h3>RPN 相比 Selective Search 的改进点</h3>
+<table>
+<thead><tr>
+<th>对比项</th>
+<th>Selective Search</th>
+<th>RPN</th>
+</tr></thead><tbody>
+<tr>
+<td>方法类型</td>
+<td>传统图像算法</td>
+<td>神经网络</td>
+</tr>
+<tr>
+<td>是否可学习</td>
+<td>不可学习</td>
+<td>可学习</td>
+</tr>
+<tr>
+<td>使用特征</td>
+<td>颜色、纹理、形状等底层规则</td>
+<td>CNN 共享特征</td>
+</tr>
+<tr>
+<td>运行位置</td>
+<td>多在 CPU</td>
+<td>可在 GPU 并行</td>
+</tr>
+<tr>
+<td>训练方式</td>
+<td>不能端到端</td>
+<td>可与检测网络联合训练</td>
+</tr>
+<tr>
+<td>速度</td>
+<td>慢</td>
+<td>快很多</td>
+</tr>
+</tbody></table>
+<p>一句话总结：</p>
+<blockquote>Selective Search 是“用传统规则找可能有物体的区域”；RPN 是“让网络在共享特征图上学习生成候选框”。</blockquote>
+</section>
+<section class="section" id="segmentation"><h2>13. 分割模型与上采样 <span class="tag important">重点</span></h2>
+<p>分类输出整张图的类别；检测输出框；分割要输出像素级预测。</p>
+<h3>下采样和上采样</h3>
+<p>下采样是把特征图空间尺寸变小：</p>
+<div class="formula">
+$$
+224\times224\rightarrow112\times112\rightarrow56\times56
+$$
+</div>
+<p>常见方式：</p>
+<ul>
+<li>池化；</li>
+<li><code>stride=2</code> 的卷积；</li>
+<li>resize 缩小。</li>
+</ul>
+<p>作用：</p>
+<ul>
+<li>减少计算量；</li>
+<li>扩大感受野；</li>
+<li>提取更抽象的语义特征。</li>
+</ul>
+<p>上采样是把特征图空间尺寸变大：</p>
+<div class="formula">
+$$
+28\times28\rightarrow56\times56\rightarrow112\times112
+$$
+</div>
+<p>作用：</p>
+<ul>
+<li>恢复空间分辨率；</li>
+<li>生成像素级预测图；</li>
+<li>用于分割、多尺度检测、特征融合。</li>
+</ul>
+<h3>转置卷积</h3>
+<p>转置卷积也叫反卷积，是一种可学习的上采样方法。</p>
+<p>普通卷积可以看作：</p>
+<div class="formula">
+$$
+\text{大输入}\rightarrow\text{小输出}
+$$
+</div>
+<p>转置卷积则是：</p>
+<div class="formula">
+$$
+\text{小输入}\rightarrow\text{大输出}
+$$
+</div>
+<p>它的直观行为是：</p>
+<blockquote>每个输入像素通过卷积核扩散到输出中的一片区域；多个输入扩散出的区域若重叠，就在重叠位置相加。</blockquote>
+<p>例如一个输入值 <code>x</code> 和 <code>3 x 3</code> 卷积核：</p>
+<div class="formula">
+$$
+\begin{bmatrix}
+w_1&amp;w_2&amp;w_3\\
+w_4&amp;w_5&amp;w_6\\
+w_7&amp;w_8&amp;w_9
+\end{bmatrix}
+$$
+</div>
+<p>会向输出区域贡献：</p>
+<div class="formula">
+$$
+\begin{bmatrix}
+xw_1&amp;xw_2&amp;xw_3\\
+xw_4&amp;xw_5&amp;xw_6\\
+xw_7&amp;xw_8&amp;xw_9
+\end{bmatrix}
+$$
+</div>
+<p>它和最近邻/双线性插值的区别是：</p>
+<ul>
+<li>插值规则固定；</li>
+<li>转置卷积的权重可学习，网络能学会更适合任务的放大方式。</li>
+</ul>
+<h3>FCN</h3>
+<p>FCN 是 Fully Convolutional Network，全卷积网络。它把分类网络中的全连接层替换成卷积层，使网络能输出空间热力图，而不是单一类别。</p>
+<p>流程：</p>
+<ol>
+<li>CNN 提取特征。</li>
+<li>全连接层卷积化。</li>
+<li>分类层输出低分辨率预测图。</li>
+<li>上采样回原图尺度。</li>
+<li>得到像素级分割结果。</li>
+</ol>
+<p>核心思想：</p>
+<blockquote>深层特征语义强但位置模糊，浅层特征位置准但语义弱，所以分割常需要多尺度特征融合。</blockquote>
+<h3>UNet</h3>
+<p>UNet 是常见分割网络，尤其常用于医学影像。它的核心结构是编码器-解码器：</p>
+<ul>
+<li>编码器：不断下采样，提取高级语义。</li>
+<li>解码器：不断上采样，恢复空间分辨率。</li>
+<li>跳跃连接：把编码器中的浅层高分辨率特征拼接到解码器，帮助恢复边界细节。</li>
+</ul>
+<p>一句话：</p>
+<blockquote>UNet 通过“下采样理解内容，上采样恢复位置，跳跃连接补回细节”来做像素级分割。</blockquote>
+</section>
+<section class="section" id="survey"><h2>14. 课件补充内容 <span class="tag pass">简单带过</span></h2>
+<h3>传统图像特征</h3>
+<p>深度学习之前，视觉任务常依赖手工特征：</p>
+<ul>
+<li>颜色直方图：统计颜色分布，丢失空间结构。</li>
+<li>HOG：统计局部梯度方向，适合形状和边缘。</li>
+<li>SIFT：尺度不变特征变换，对尺度、旋转、亮度变化较鲁棒，常用于匹配、识别、三维重建。</li>
+</ul>
+<p>深度学习的区别是端到端自动学习特征：低层学边缘纹理，高层学部件和语义。</p>
+<h3>FPN</h3>
+<p>FPN 是 Feature Pyramid Network，特征金字塔网络。它把深层强语义特征上采样，再和浅层高分辨率特征横向连接融合。</p>
+<p>目标是让特征同时：</p>
+<ul>
+<li>看得懂：深层语义强；</li>
+<li>看得清：浅层定位准。</li>
+</ul>
+<p>因此 FPN 对小目标检测特别重要。</p>
+<h3>Mask R-CNN</h3>
+<p>Mask R-CNN 在 Faster R-CNN 基础上增加了 mask 分支，用于实例分割。它还用 RoI Align 替代 RoI Pooling，避免取整量化造成的像素级错位。</p>
+<p>关键词：</p>
+<ul>
+<li>分类头；</li>
+<li>边界框回归头；</li>
+<li>掩码头；</li>
+<li>RoI Align；</li>
+<li>像素级 sigmoid 交叉熵。</li>
+</ul>
+<h3>ResNet 之后的模型</h3>
+<p>这些模型了解关键词即可：</p>
+<table>
+<thead><tr>
+<th>模型</th>
+<th>关键词</th>
+</tr></thead><tbody>
+<tr>
+<td>SENet</td>
+<td>学习通道重要性，增强有用通道，抑制冗余通道</td>
+</tr>
+<tr>
+<td>DenseNet</td>
+<td>每层连接到前面所有层，特征复用，梯度传播更顺</td>
+</tr>
+<tr>
+<td>MobileNet</td>
+<td>深度可分离卷积，面向移动端和低算力设备</td>
+</tr>
+<tr>
+<td>EfficientNet</td>
+<td>同时缩放深度、宽度、分辨率，追求精度和效率平衡</td>
+</tr>
+<tr>
+<td>ViT</td>
+<td>把图像切成 patch，用 Transformer 做视觉建模</td>
+</tr>
+<tr>
+<td>CAM</td>
+<td>用类别权重反投影到最后卷积特征图，可视化模型关注区域</td>
+</tr>
+</tbody></table>
+<h3>视频视觉模型核心思想</h3>
+<p>视频比图像多了时间维度。图像模型主要看空间信息，视频模型还要建模运动和时序关系。</p>
+<p>常见思路：</p>
+<ul>
+<li>逐帧 CNN：先提取每帧特征，再聚合。</li>
+<li>3D CNN：卷积核同时覆盖空间和时间，例如 <code>T x H x W</code>。</li>
+<li>双流网络：一支看 RGB 外观，一支看光流运动。</li>
+<li>Transformer 视频模型：用注意力建模长距离时序依赖。</li>
+</ul>
+<p>一句话：</p>
+<blockquote>视频视觉模型不仅要知道“画面里有什么”，还要知道“它们如何随时间变化”。</blockquote>
+</section>
+<section class="section" id="summary"><h2>15. 一页速记</h2>
+<table>
+<thead><tr>
+<th>问题</th>
+<th>速记答案</th>
+</tr></thead><tbody>
+<tr>
+<td>RGB 通道是什么</td>
+<td>红、绿、蓝三种强度数值组合成像素颜色</td>
+</tr>
+<tr>
+<td>多通道卷积怎么合并</td>
+<td>每个通道分别卷积，结果逐位置相加，再加 bias</td>
+</tr>
+<tr>
+<td>卷积核参数可学习吗</td>
+<td>可学习，卷积核权重和偏置都通过反向传播更新</td>
+</tr>
+<tr>
+<td>激活函数作用在哪里</td>
+<td>对卷积结果中每个位置、每个通道逐元素作用</td>
+</tr>
+<tr>
+<td>接全连接前要展平吗</td>
+<td>传统 CNN 要 flatten；现代网络也常用 GAP</td>
+</tr>
+<tr>
+<td>stride 有什么作用</td>
+<td>控制滑动间隔，stride 大会下采样</td>
+</tr>
+<tr>
+<td>padding 有什么作用</td>
+<td>保留边缘信息，控制输出尺寸</td>
+</tr>
+<tr>
+<td>感受野是什么</td>
+<td>输出某位置能看到的输入区域大小</td>
+</tr>
+<tr>
+<td>池化有什么作用</td>
+<td>降尺寸、减计算、扩大有效感受野、增强平移不变性</td>
+</tr>
+<tr>
+<td>1x1 卷积为什么能降维</td>
+<td>输出通道数由卷积核个数决定，可把每个位置的高维通道向量压成低维</td>
+</tr>
+<tr>
+<td>ResNet 学什么</td>
+<td>学残差 <code>F(x)=H(x)-x</code>，输出 <code>F(x)+x</code></td>
+</tr>
+<tr>
+<td>IoU 是什么</td>
+<td>预测框和真实框交集面积除以并集面积</td>
+</tr>
+<tr>
+<td>mAP 是什么</td>
+<td>各类别 AP 的平均，综合衡量分类和定位</td>
+</tr>
+<tr>
+<td>RPN 改进了什么</td>
+<td>用可学习网络替代 Selective Search，和检测网络共享特征</td>
+</tr>
+<tr>
+<td>YOLO 核心是什么</td>
+<td>单阶段，一次前向直接预测框和类别</td>
+</tr>
+<tr>
+<td>上采样是什么</td>
+<td>把低分辨率特征图恢复到更大空间尺寸</td>
+</tr>
+<tr>
+<td>转置卷积是什么</td>
+<td>可学习上采样，每个输入点扩散到输出区域，重叠处相加</td>
+</tr>
+</tbody></table>
 </section>
       <div class="footer">由 deep-vision-models-notes.md 生成，可直接上传到 GitHub Pages。</div>
     </main>
