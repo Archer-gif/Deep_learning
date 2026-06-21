@@ -316,7 +316,6 @@
         <a href="#pca">PCA</a>
         <a href="#kmeans">k-means</a>
         <a href="#survey">了解项</a>
-        <a href="#build">网页怎么做</a>
       </nav>
     </aside>
 
@@ -570,29 +569,6 @@
           <div class="mini"><h3>集成学习</h3><p>Bagging 主要降方差；Boosting 主要降偏差。</p></div>
           <div class="mini"><h3>迁移学习</h3><p>用源域知识帮助目标域，常见做法是预训练后微调。</p></div>
         </div>
-      </section>
-
-      <section class="section" id="build">
-        <h2>12. 这个网页怎么做 <span class="tag know">了解</span></h2>
-        <p>这个页面是一个单文件静态网页，结构类似课程笔记站点：</p>
-        <ol>
-          <li>先用 Markdown 整理章节、公式和重点。</li>
-          <li>写 `index.html`，用语义化标题和左侧目录组织内容。</li>
-          <li>用 CSS 设置版式、侧边栏、重点标签、表格和公式块。</li>
-          <li>用 HTML 原生的 `&lt;details&gt;` 和 `&lt;summary&gt;` 实现点击展开。</li>
-          <li>用 MathJax 渲染 LaTeX 公式。</li>
-          <li>本地检查后，可把文件上传到 GitHub Pages。</li>
-        </ol>
-        <details>
-          <summary>展开：发布到 GitHub Pages 的步骤</summary>
-          <ol>
-            <li>新建一个 GitHub 仓库，例如 `ml-notes`。</li>
-            <li>上传 `index.html`。</li>
-            <li>打开 Settings -> Pages。</li>
-            <li>Source 选择部署分支，例如 `main`，目录选 `/root`。</li>
-            <li>保存后访问 `https://你的用户名.github.io/ml-notes/`。</li>
-          </ol>
-        </details>
       </section>
 
       <div class="footer">生成于本地工作区：Markdown 与 HTML 可继续编辑、发布或打印。</div>
