@@ -270,6 +270,23 @@
       font-size: 0.92em;
     }
 
+    pre {
+      overflow-x: auto;
+      background: #fbfcff;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 12px 14px;
+      margin: 12px 0;
+    }
+
+    pre code {
+      display: block;
+      background: transparent;
+      border: 0;
+      padding: 0;
+      white-space: pre;
+    }
+
     .tag {
       display: inline-flex;
       align-items: center;
@@ -441,6 +458,55 @@
           <a href="#nn-optimizers">优化器</a>
           <a href="#nn-weight-decay">权重衰减</a>
           <a href="#nn-lr">学习率技巧</a>
+        </div>
+      </details>
+      <details class="chapter" open>
+        <summary>表示学习</summary>
+        <div class="chapter-links">
+          <a href="#rep-representation-overview">总览</a>
+          <a href="#rep-pretext">Pretext 任务</a>
+          <a href="#rep-contrastive-learning">对比学习</a>
+          <a href="#rep-simclr-architecture">SimCLR 结构</a>
+          <a href="#rep-simclr-loss">NT-Xent 损失</a>
+          <a href="#rep-skip-gram">Word2Vec</a>
+          <a href="#rep-language-self-supervision">语言自监督</a>
+        </div>
+      </details>
+      <details class="chapter" open>
+        <summary>深度视觉模型</summary>
+        <div class="chapter-links">
+          <a href="#dv-overview">总览</a>
+          <a href="#dv-generative-goal">生成目标</a>
+          <a href="#dv-vae-motivation">VAE 动机</a>
+          <a href="#dv-vae-math">VAE 数学原理</a>
+          <a href="#dv-vae-loss">VAE 损失</a>
+          <a href="#dv-diffusion-overview">Diffusion 总览</a>
+          <a href="#dv-diffusion-training">训练流程</a>
+        </div>
+      </details>
+      <details class="chapter" open>
+        <summary>生成式模型</summary>
+        <div class="chapter-links">
+          <a href="#gen-overview">总览</a>
+          <a href="#gen-vae-motivation">VAE 动机</a>
+          <a href="#gen-vae-math">VAE 数学原理</a>
+          <a href="#gen-reparameterization">重参数化</a>
+          <a href="#gen-gan">GAN</a>
+          <a href="#gen-diffusion-overview">Diffusion</a>
+          <a href="#gen-latent-diffusion">Stable Diffusion</a>
+        </div>
+      </details>
+      <details class="chapter" open>
+        <summary>大语言模型</summary>
+        <div class="chapter-links">
+          <a href="#llm-overview">总览</a>
+          <a href="#llm-architectures">三种架构</a>
+          <a href="#llm-encoder-only">Encoder-only</a>
+          <a href="#llm-decoder-only">Decoder-only</a>
+          <a href="#llm-encoder-decoder">Encoder-Decoder</a>
+          <a href="#llm-attention-types">三种注意力</a>
+          <a href="#llm-rag-why">RAG</a>
+          <a href="#llm-rag-when-where-how">何时何处增强</a>
         </div>
       </details>
     </aside>
@@ -1522,6 +1588,2880 @@ $$
 </ul>
 </section>
 
+      <div class="course-divider" id="representation-course">表示学习</div>
+<section class="hero" id="rep-overview"><h1>表征学习复习笔记</h1>
+<blockquote>依据第八章《表征学习》课件、重点截图，以及本轮关于 SimCLR 对比损失的问答整理。红色重点详写；黑色内容以“知道是什么、为什么出现”为主；课件中出现但重点图未列出的内容简单带过。</blockquote>
+</section>
+<section class="section" id="rep-priority"><h2>0. 复习优先级</h2>
+<table>
+<thead><tr>
+<th>优先级</th>
+<th>内容</th>
+<th>复习目标</th>
+</tr></thead><tbody>
+<tr>
+<td>重点</td>
+<td>SimCLR 的网络结构和输入、SimCLR 的 NT-Xent 损失、Skip-Gram 变体的计算公式</td>
+<td>会解释网络流程、公式每一项含义，以及如何拉近正样本、推远负样本</td>
+</tr>
+<tr>
+<td>了解</td>
+<td>Pretext 任务、对比学习、语言自监督学习、掩码预测、Next-Token Prediction</td>
+<td>能说清概念、结构、适用场景和核心直觉</td>
+</tr>
+<tr>
+<td>简单带过</td>
+<td>MoCo、GloVe、BERT/RoBERTa/GPT、MAE/SimMIM、自监督学习发展脉络</td>
+<td>知道名字、作用和关键词即可</td>
+</tr>
+</tbody></table>
+</section>
+<section class="section" id="rep-representation-overview"><h2>1. 表征学习总览 <span class="tag know">了解</span></h2>
+<p>表征学习关注的是：如何把原始数据 <code>x</code> 映射成更有用的向量 <code>z</code>。</p>
+<div class="formula">
+$$
+z=f(x)
+$$
+</div>
+<p>其中 <code>f</code> 通常是一个神经网络 encoder，<code>z</code> 是模型学到的表征向量。好的表征应该满足：</p>
+<ul>
+<li>语义相似的样本，在向量空间中距离近。</li>
+<li>语义不同的样本，在向量空间中距离远。</li>
+<li>下游任务只需要较简单的分类器或少量微调，就能取得不错效果。</li>
+</ul>
+<p>传统视觉任务常依赖 SIFT、HOG 等人工特征；现代深度学习更倾向于让模型从数据中自动学习表征。这样可以减少人工设计成本，并捕获更复杂的语义和非线性结构。</p>
+<h3>为什么需要表征学习</h3>
+<p>表征学习主要解决三个问题：</p>
+<ul>
+<li>降低数据维度：把高维原始像素、文本 token 等压缩成紧凑向量。</li>
+<li>捕获数据语义：让向量不仅表示像素或词面，还表示类别、对象、上下文、风格等抽象信息。</li>
+<li>提升泛化能力：学到的 encoder 可以迁移到分类、检测、分割、检索等下游任务。</li>
+</ul>
+<h3>如何评估表征好坏</h3>
+<p>常见方法有两类：</p>
+<ul>
+<li>Linear Probing：冻结 encoder，只用学到的表征训练一个线性分类器。若线性分类器效果好，说明表征已经把类别结构分得比较清楚。</li>
+<li>可视化聚类：用 PCA、t-SNE 等方法把高维表征降到二维，观察类内是否紧凑、类间是否分离。</li>
+</ul>
+</section>
+<section class="section" id="rep-pretext"><h2>2. Pretext 任务 <span class="tag know">了解</span></h2>
+<p>Pretext 任务也叫代理任务。核心思想是：</p>
+<blockquote>不用人工标签，而是利用数据自身属性构造“伪标签”，让模型通过解决这个人为设计的小任务，间接学到有用表征。</blockquote>
+<p>典型流程：</p>
+<div class="formula">
+$$
+\text{未标注数据} \rightarrow \text{自动变换} \rightarrow \text{伪标签} \rightarrow \text{预训练 encoder} \rightarrow \text{下游任务}
+$$
+</div>
+<p>常见视觉 Pretext 任务：</p>
+<table>
+<thead><tr>
+<th>任务</th>
+<th>伪标签</th>
+<th>希望模型学到什么</th>
+</tr></thead><tbody>
+<tr>
+<td>旋转预测</td>
+<td><code>0°/90°/180°/270°</code></td>
+<td>主体方向、物体轮廓、场景重力方向</td>
+</tr>
+<tr>
+<td>相对位置预测</td>
+<td>一个 patch 相对另一个 patch 的方向</td>
+<td>局部之间的空间关系</td>
+</tr>
+<tr>
+<td>拼图游戏</td>
+<td>被打乱 patch 的排列类别</td>
+<td>从局部推断全局结构</td>
+</tr>
+<tr>
+<td>着色</td>
+<td>从灰度图恢复颜色</td>
+<td>材质、区域类别、场景上下文</td>
+</tr>
+</tbody></table>
+<p>Pretext 任务的局限是：模型可能只学会“解这道题”的捷径，而不是学到真正适合下游任务的通用语义。例如拼图任务可能利用 patch 边缘连续性取巧，着色任务可能记住颜色统计规律。</p>
+</section>
+<section class="section" id="rep-contrastive-learning"><h2>3. 对比学习 <span class="tag know">了解</span></h2>
+<p>对比学习的直觉比传统 Pretext 任务更直接：</p>
+<blockquote>在特征空间中，拉近相似样本，推远不相似样本。</blockquote>
+<p>有监督对比学习可以用人工标签判断正负样本，但标注成本高。自监督对比学习则通过数据增强自动构造正负样本：</p>
+<ul>
+<li>正样本对：同一张原图经过两种不同增强得到的两个视图。</li>
+<li>负样本对：不同原图得到的视图。</li>
+</ul>
+<p>这件事背后的假设是：增强前后图像的语义不变。例如一张猫图经过随机裁剪、颜色抖动、翻转后，仍然应被理解为同一只猫或同一类语义对象。</p>
+</section>
+<section class="section" id="rep-simclr-architecture"><h2>4. SimCLR 的网络结构和输入 <span class="tag important">重点</span></h2>
+<p>SimCLR 是视觉自监督对比学习中的经典框架。它的核心目标是：</p>
+<blockquote>不靠人工标签，只通过“同一图片的不同增强视图应该相似，不同图片的视图应该不相似”来训练 encoder。</blockquote>
+<h3>输入如何构造</h3>
+<p>假设一个 batch 中有 <code>N</code> 张原始图片：</p>
+<div class="formula">
+$$
+x_1,x_2,\dots,x_N
+$$
+</div>
+<p>SimCLR 对每张图片随机采样两次数据增强，得到两个视图：</p>
+<div class="formula">
+$$
+\tilde{x}_{2k-1}=t_1(x_k),\qquad \tilde{x}_{2k}=t_2(x_k)
+$$
+</div>
+<p>因此一个 batch 会从 <code>N</code> 张原图变成 <code>2N</code> 个增强视图。</p>
+<p>对于第 <code>k</code> 张原图：</p>
+<ul>
+<li>$\tilde{x}_{2k-1}$ 和 $\tilde{x}_{2k}$ 是正样本对。</li>
+<li>它们和其他 <code>2N-2</code> 个视图构成负样本对。</li>
+</ul>
+<h3>SimCLR 的四个模块</h3>
+<p>SimCLR 可以拆成四步：</p>
+<table>
+<thead><tr>
+<th>模块</th>
+<th>记号</th>
+<th>作用</th>
+</tr></thead><tbody>
+<tr>
+<td>数据增强</td>
+<td><code>t ~ T</code></td>
+<td>从同一图像生成不同视图，构造正样本对</td>
+</tr>
+<tr>
+<td>基础编码器</td>
+<td>$h=f(\tilde{x})$</td>
+<td>通常用 ResNet，把图像变成高维语义特征</td>
+</tr>
+<tr>
+<td>投影头</td>
+<td>$z=g(h)$</td>
+<td>把语义特征映射到对比损失空间</td>
+</tr>
+<tr>
+<td>对比损失</td>
+<td>NT-Xent</td>
+<td>拉近正样本、推远负样本</td>
+</tr>
+</tbody></table>
+<p>其中训练时损失一般作用在 <code>z</code> 上；下游任务迁移时通常丢掉投影头 <code>g</code>，使用基础编码器输出的 <code>h</code>。</p>
+<h3>为什么需要投影头</h3>
+<p>投影头不是为了最终分类，而是为了服务对比学习目标。</p>
+<p>对比任务可能需要保留一些“区分增强视图”的信息，例如颜色、局部裁剪位置、纹理细节；但这些信息未必是下游分类、检测需要的核心语义。投影头相当于一个缓冲层：</p>
+<ul>
+<li>$z=g(h)$ 用来承受对比损失的直接约束。</li>
+<li>$h=f(x)$ 保留更通用、更干净的语义表示。</li>
+</ul>
+<p>所以 SimCLR 训练结束后，常用 <code>h</code> 做下游任务，而不是直接用 <code>z</code>。</p>
+<h3>数据增强为什么重要</h3>
+<p>SimCLR 的关键经验是：数据增强组合决定表征质量。</p>
+<p>单纯随机裁剪可能让模型找到捷径。例如两张裁剪图如果共享局部纹理，模型可能只记纹理，不理解整体语义。把随机裁剪和颜色抖动结合，会迫使模型不依赖颜色或局部细节，而更多关注形状、结构和语义。</p>
+</section>
+<section class="section" id="rep-simclr-loss"><h2>5. SimCLR 的损失函数 NT-Xent <span class="tag important">重点</span></h2>
+<p>NT-Xent 损失的全称是 Normalized Temperature-scaled Cross Entropy Loss。它可以理解成一个分类问题：</p>
+<blockquote>给定 anchor 视图 <code>i</code>，模型要从 batch 中所有其他视图里，把它真正的正样本 <code>j</code> 找出来。</blockquote>
+<p>对一对正样本 <code>(i,j)</code>，损失写成：</p>
+<div class="formula">
+$$
+\ell(i,j)
+=-\log
+\frac{\exp(\operatorname{sim}(z_i,z_j)/\tau)}
+{\sum_{k=1}^{2N}\mathbf{1}_{[k\ne i]}\exp(\operatorname{sim}(z_i,z_k)/\tau)}
+$$
+</div>
+<p>其中：</p>
+<ul>
+<li><code>z_i</code>：第 <code>i</code> 个增强视图经过 encoder 和 projector 后的向量。</li>
+<li><code>z_j</code>：与 <code>i</code> 来自同一原图的另一个增强视图，是正样本。</li>
+<li><code>z_k</code>：batch 中除 <code>i</code> 之外的所有候选视图。</li>
+<li><code>sim(z_i,z_k)</code>：相似度，通常是余弦相似度。</li>
+<li><code>τ</code>：温度系数，控制 softmax 分布的尖锐程度。</li>
+<li><code>1[k != i]</code>：排除样本自己，不让 <code>i</code> 和 <code>i</code> 比。</li>
+</ul>
+<h3>这个公式如何拉近正样本</h3>
+<p>分子是正样本对的相似度：</p>
+<div class="formula">
+$$
+\exp(\operatorname{sim}(z_i,z_j)/\tau)
+$$
+</div>
+<p>如果 <code>i</code> 和 <code>j</code> 更相似，分子会变大，整个 softmax 概率变大：</p>
+<div class="formula">
+$$
+\frac{\exp(\operatorname{sim}(z_i,z_j)/\tau)}
+{\sum_{k\ne i}\exp(\operatorname{sim}(z_i,z_k)/\tau)}
+\uparrow
+$$
+</div>
+<p>损失是负对数：</p>
+<div class="formula">
+$$
+-\log(\text{probability})
+$$
+</div>
+<p>概率越大，损失越小。因此训练会鼓励正样本相似度变大。</p>
+<h3>这个公式如何推远负样本</h3>
+<p>分母包含所有候选样本，包括正样本和负样本：</p>
+<div class="formula">
+$$
+\sum_{k=1}^{2N}\mathbf{1}_{[k\ne i]}\exp(\operatorname{sim}(z_i,z_k)/\tau)
+$$
+</div>
+<p>如果某个负样本 <code>k</code> 和 anchor <code>i</code> 太相似，那么：</p>
+<div class="formula">
+$$
+\exp(\operatorname{sim}(z_i,z_k)/\tau)
+$$
+</div>
+<p>会变大，分母变大，正样本概率变小，损失变大。为了降低损失，模型就会压低负样本与 anchor 的相似度。</p>
+<p>一句话记忆：</p>
+<blockquote>正样本相似度在分子里，变大会降低损失；负样本相似度在分母里，变大会提高损失。</blockquote>
+<h3>整个 batch 的总损失</h3>
+<p>一对正样本会算两个方向：</p>
+<ul>
+<li><code>i -&gt; j</code>：把 <code>i</code> 当 anchor，找 <code>j</code>。</li>
+<li><code>j -&gt; i</code>：把 <code>j</code> 当 anchor，找 <code>i</code>。</li>
+</ul>
+<p>总损失是：</p>
+<div class="formula">
+$$
+L=\frac{1}{2N}\sum_{k=1}^{N}
+\left[
+\ell(2k-1,2k)+\ell(2k,2k-1)
+\right]
+$$
+</div>
+<p>这表示 batch 中 <code>N</code> 对正样本，总共 <code>2N</code> 个 anchor，每个 anchor 都要完成一次“从候选集中找出自己正样本”的任务。</p>
+<details>
+<summary>展开：把 NT-Xent 看成 softmax 分类</summary>
+<p>对固定 anchor <code>i</code>，候选集合是 batch 中除自己以外的 <code>2N-1</code> 个视图。模型给每个候选 <code>k</code> 一个分数：</p>
+<div class="formula">
+$$
+s_{i,k}=\operatorname{sim}(z_i,z_k)/\tau
+$$
+</div>
+<p>经过 softmax 后，候选 <code>k</code> 是正样本的概率为：</p>
+<div class="formula">
+$$
+P(k\mid i)=
+\frac{\exp(s_{i,k})}{\sum_{a\ne i}\exp(s_{i,a})}
+$$
+</div>
+<p>真实答案是 <code>j</code>，所以交叉熵损失就是：</p>
+<div class="formula">
+$$
+\ell(i,j)=-\log P(j|i)
+$$
+</div>
+<p>这和普通多分类交叉熵非常像：类别不是人工标签，而是“哪个视图是同一张原图的另一个增强版本”。</p>
+</details>
+<details>
+<summary>展开：温度系数 τ 的直觉</summary>
+<p>温度系数 <code>τ</code> 控制 softmax 对相似度差异的敏感程度：</p>
+<div class="formula">
+$$
+s_{i,k}=\operatorname{sim}(z_i,z_k)/\tau
+$$
+</div>
+<ul>
+<li><code>τ</code> 较小：相似度差异会被放大，softmax 更尖锐，模型更关注难负样本。</li>
+<li><code>τ</code> 较大：分布更平滑，不会过度强调少数相似度较高的样本。</li>
+</ul>
+<p>SimCLR 中常需要调节 <code>τ</code>，因为它会影响“拉近”和“推远”的力度。</p>
+</details>
+</section>
+<section class="section" id="rep-skip-gram"><h2>6. Word2Vec 与 Skip-Gram <span class="tag important">重点</span></h2>
+<p>Word2Vec 是单词表征学习的经典方法。它要解决的问题是：one-hot 向量无法表达语义相似性。</p>
+<p>例如“火车”和“高铁”在 one-hot 表示中是正交的，但它们语义接近。Word2Vec 的基本想法是：</p>
+<blockquote>一个词的含义由它经常出现的上下文决定。</blockquote>
+<h3>Skip-Gram 和 CBOW 的区别</h3>
+<p>Word2Vec 有两个常见变体：</p>
+<table>
+<thead><tr>
+<th>变体</th>
+<th>输入</th>
+<th>预测目标</th>
+<th>直觉</th>
+</tr></thead><tbody>
+<tr>
+<td>Skip-Gram</td>
+<td>中心词</td>
+<td>上下文词</td>
+<td>给定“猫”，预测附近可能有“可爱”“喵”“宠物”</td>
+</tr>
+<tr>
+<td>CBOW</td>
+<td>上下文词</td>
+<td>中心词</td>
+<td>给定周围词，预测中间词</td>
+</tr>
+</tbody></table>
+<p>截图红色重点是 Skip-Gram。</p>
+<h3>Skip-Gram 的目标函数</h3>
+<p>给定文本序列：</p>
+<div class="formula">
+$$
+w_1,w_2,\dots,w_T
+$$
+</div>
+<p>窗口大小为 <code>m</code>。对位置 <code>t</code>，中心词是 <code>w_t</code>，上下文词是：</p>
+<div class="formula">
+$$
+w_{t-m},\dots,w_{t-1},w_{t+1},\dots,w_{t+m}
+$$
+</div>
+<p>Skip-Gram 希望最大化中心词预测上下文词的概率：</p>
+<div class="formula">
+$$
+\prod_{t=1}^{T}
+\prod_{j=-m,\,j\ne 0}^{m}
+P(w_{t+j}\mid w_t)
+$$
+</div>
+<p>实际训练常取负平均 log likelihood，写成损失：</p>
+<div class="formula">
+$$
+J(\theta)=
+-\frac{1}{T}
+\sum_{t=1}^{T}
+\sum_{j=-m,\,j\ne 0}^{m}
+\log P(w_{t+j}\mid w_t;\theta)
+$$
+</div>
+<p>其中：</p>
+<ul>
+<li><code>t</code>：当前中心词在文本中的位置。</li>
+<li><code>m</code>：上下文窗口大小。</li>
+<li><code>w_t</code>：中心词。</li>
+<li><code>w_{t+j}</code>：窗口内的上下文词。</li>
+<li><code>θ</code>：所有词向量参数。</li>
+</ul>
+<h3>如何计算 <code>P(o|c)</code></h3>
+<p>对每个词 <code>w</code>，Word2Vec 通常维护两套向量：</p>
+<ul>
+<li>中心词向量 <code>v_w</code>。</li>
+<li>上下文词向量 <code>u_w</code>。</li>
+</ul>
+<p>给定中心词 <code>c</code>，上下文词为 <code>o</code> 的概率用 softmax 表示：</p>
+<div class="formula">
+$$
+P(o\mid c)=
+\frac{\exp(u_o^\top v_c)}
+{\sum_{w\in V}\exp(u_w^\top v_c)}
+$$
+</div>
+<p>其中 <code>V</code> 是整个词表。</p>
+<p>这个公式的含义是：</p>
+<ul>
+<li><code>u_o^T v_c</code> 越大，说明上下文词 <code>o</code> 和中心词 <code>c</code> 越匹配。</li>
+<li>分母对词表中所有词做归一化，把分数变成概率。</li>
+<li>训练会让真实上下文词的点积变大，让不相关词的点积相对变小。</li>
+</ul>
+<details>
+<summary>展开：为什么 Skip-Gram 公式能学到语义相似</summary>
+<p>假设两个词经常出现在相似上下文中，例如“火车”和“高铁”附近都常出现“车站”“杭州”“票”“出发”。为了让它们都能预测这些上下文词，模型会把它们的中心词向量调整到相似方向。</p>
+<p>从公式看，若中心词 <code>c</code> 要高概率预测上下文词 <code>o</code>，就需要：</p>
+<div class="formula">
+$$
+u_o^\top v_c
+$$
+</div>
+<p>变大。若两个中心词 <code>c_1</code> 和 <code>c_2</code> 共享很多上下文，它们都会被拉向这些上下文向量，于是：</p>
+<div class="formula">
+$$
+v_{c_1}\approx v_{c_2}
+$$
+</div>
+<p>这就是“分布相似导致向量相似”的来源。</p>
+</details>
+<h3>Negative Sampling</h3>
+<p>直接计算 softmax 的分母需要遍历整个词表，词表很大时计算代价极高。Negative Sampling 的做法是：</p>
+<blockquote>不再和所有词比较，而是只采样少量负样本，把多分类问题改成多个二分类问题。</blockquote>
+<p>对一个真实中心词-上下文词对 <code>(c,o)</code>，目标变成：</p>
+<div class="formula">
+$$
+\log\sigma(u_o^\top v_c)
++\sum_{i=1}^{K}
+\mathbb{E}_{w_i\sim P_n(w)}
+\left[
+\log\sigma(-u_{w_i}^\top v_c)
+\right]
+$$
+</div>
+<p>其中：</p>
+<ul>
+<li>第一项鼓励真实上下文 <code>o</code> 与中心词 <code>c</code> 相似。</li>
+<li>第二项鼓励采样到的负样本 <code>w_i</code> 与中心词 <code>c</code> 不相似。</li>
+<li><code>K</code> 通常取 <code>5~20</code>。</li>
+<li>负采样分布常与词频有关，例如按 <code>U(w)^{3/4}</code> 采样，以降低超高频词的支配性。</li>
+</ul>
+<p>这和 SimCLR 的思想非常像：真实上下文是正样本，采样词是负样本；正样本拉近，负样本推远。</p>
+</section>
+<section class="section" id="rep-language-self-supervision"><h2>7. 语言自监督学习 <span class="tag know">了解</span></h2>
+<p>课件后半部分把表征学习扩展到语言模型。了解主线即可：</p>
+<table>
+<thead><tr>
+<th>方法</th>
+<th>核心任务</th>
+<th>关键词</th>
+</tr></thead><tbody>
+<tr>
+<td>BERT</td>
+<td>Masked Language Modeling</td>
+<td>随机 mask token，利用双向上下文预测原词</td>
+</tr>
+<tr>
+<td>RoBERTa</td>
+<td>更充分训练 BERT</td>
+<td>更多数据、更多步数、移除 NSP 辅助任务</td>
+</tr>
+<tr>
+<td>GPT</td>
+<td>Next-Token Prediction</td>
+<td>decoder-only，自回归预测下一个 token</td>
+</tr>
+<tr>
+<td>ChatGPT</td>
+<td>预训练 + 对齐</td>
+<td>在 GPT 基础上引入人类反馈对齐</td>
+</tr>
+</tbody></table>
+<h3>掩码预测</h3>
+<p>BERT 的核心是去噪自编码：随机选择约 <code>15%</code> token，让模型根据左右上下文预测被遮挡的原词。</p>
+<p>被选中的 token 通常按如下方式处理：</p>
+<table>
+<thead><tr>
+<th>比例</th>
+<th>处理方式</th>
+<th>目的</th>
+</tr></thead><tbody>
+<tr>
+<td>80%</td>
+<td>替换为 <code>[MASK]</code></td>
+<td>提供主要训练信号</td>
+</tr>
+<tr>
+<td>10%</td>
+<td>替换为随机 token</td>
+<td>防止模型只学会看到 <code>[MASK]</code> 才预测</td>
+</tr>
+<tr>
+<td>10%</td>
+<td>保持不变</td>
+<td>缓解预训练和微调输入不一致</td>
+</tr>
+</tbody></table>
+<h3>Next-Token Prediction</h3>
+<p>GPT 系列使用 Next-Token Prediction，把序列概率分解为：</p>
+<div class="formula">
+$$
+P(w_1,w_2,\dots,w_T)
+=\prod_{t=1}^{T}P(w_t\mid w_1,\dots,w_{t-1})
+$$
+</div>
+<p>模型只能看左侧已经出现的 token，然后预测下一个 token。这种单向约束天然适合文本生成。</p>
+</section>
+<section class="section" id="rep-image-self-supervision"><h2>8. 图像自监督的新方向 <span class="tag pass">简单带过</span></h2>
+<p>图像和文本的自监督学习难点不同：</p>
+<ul>
+<li>文本是离散 token，天然有顺序和上下文。</li>
+<li>图像是连续像素，局部像素相似不一定等于语义相似。</li>
+</ul>
+<p>因此视觉自监督除了对比学习，也发展出掩码图像建模。</p>
+<h3>Masked Image Modeling</h3>
+<p>Masked Image Modeling 的核心是：</p>
+<blockquote>遮住图像的一大部分，让模型通过剩余可见区域理解整体，并重建缺失部分。</blockquote>
+<p>典型对比：</p>
+<table>
+<thead><tr>
+<th>文本 BERT</th>
+<th>图像 MIM</th>
+</tr></thead><tbody>
+<tr>
+<td>mask 约 15% token</td>
+<td>mask 大量 image patches，MAE 常用约 75%</td>
+</tr>
+<tr>
+<td>预测缺失词</td>
+<td>重建缺失图像块或像素</td>
+</tr>
+</tbody></table>
+<p>MAE 使用非对称结构：重型 encoder 只处理可见 patch，轻型 decoder 负责重建像素。这让模型把计算集中在表征学习上，而不是把所有算力浪费在重建细节上。</p>
+<p>SimMIM 则更直接：随机 mask 图像块，用轻量预测头回归原始像素值，结构简单，可适配 ViT、Swin 等骨干网络。</p>
+</section>
+<section class="section" id="rep-representation-summary"><h2>9. 表征学习一页速记</h2>
+<table>
+<thead><tr>
+<th>问题</th>
+<th>速记答案</th>
+</tr></thead><tbody>
+<tr>
+<td>表征是什么</td>
+<td>原始数据经过 encoder 后得到的向量 <code>z=f(x)</code></td>
+</tr>
+<tr>
+<td>好表征什么样</td>
+<td>语义相似的样本距离近，语义不同的样本距离远</td>
+</tr>
+<tr>
+<td>Linear Probing 测什么</td>
+<td>冻结 encoder，只训练线性分类器，检验表征是否线性可分</td>
+</tr>
+<tr>
+<td>Pretext 任务是什么</td>
+<td>用数据自身构造伪标签，通过代理任务训练表征</td>
+</tr>
+<tr>
+<td>Pretext 的问题</td>
+<td>可能学会解题捷径，不一定学到通用语义</td>
+</tr>
+<tr>
+<td>对比学习核心</td>
+<td>拉近正样本，推远负样本</td>
+</tr>
+<tr>
+<td>SimCLR 正样本是什么</td>
+<td>同一原图的两个不同增强视图</td>
+</tr>
+<tr>
+<td>SimCLR 负样本是什么</td>
+<td>batch 中其他原图的增强视图</td>
+</tr>
+<tr>
+<td>SimCLR 输入数量</td>
+<td><code>N</code> 张原图增强成 <code>2N</code> 个视图</td>
+</tr>
+<tr>
+<td>SimCLR encoder 做什么</td>
+<td>把增强图像变成语义特征 <code>h</code></td>
+</tr>
+<tr>
+<td>SimCLR projector 做什么</td>
+<td>把 <code>h</code> 映射到对比损失空间 <code>z</code></td>
+</tr>
+<tr>
+<td>下游任务用哪个向量</td>
+<td>通常用 encoder 输出 <code>h</code>，不用 projector 输出 <code>z</code></td>
+</tr>
+<tr>
+<td>NT-Xent 为什么拉近正样本</td>
+<td>正样本相似度在分子里，变大使损失变小</td>
+</tr>
+<tr>
+<td>NT-Xent 为什么推远负样本</td>
+<td>负样本相似度在分母里，变大使损失变大</td>
+</tr>
+<tr>
+<td>Skip-Gram 做什么</td>
+<td>用中心词预测上下文词</td>
+</tr>
+<tr>
+<td>CBOW 做什么</td>
+<td>用上下文预测中心词</td>
+</tr>
+<tr>
+<td>Negative Sampling 做什么</td>
+<td>用少量负样本近似大词表 softmax</td>
+</tr>
+<tr>
+<td>BERT 学什么</td>
+<td>双向上下文下的 masked token 预测</td>
+</tr>
+<tr>
+<td>GPT 学什么</td>
+<td>根据左侧上下文预测下一个 token</td>
+</tr>
+<tr>
+<td>MAE 学什么</td>
+<td>mask 大量图像 patch，通过重建学习视觉表征</td>
+</tr>
+</tbody></table>
+</section>
+
+      <div class="course-divider" id="deep-vision-course">深度视觉模型</div>
+<section class="hero" id="dv-overview"><h1>生成模型复习笔记</h1>
+<blockquote>依据第九章《生成式模型》课件、重点截图，以及本轮关于 VAE 隐变量分布、KL 正则项、重参数化技巧、随机采样生成、文生图条件控制的问答整理。红色重点详写；黑色内容以“知道是什么、为什么出现”为主；课件中出现但重点图未列出的内容简单带过。</blockquote>
+</section>
+<section class="section" id="dv-priority"><h2>0. 复习优先级</h2>
+<table>
+<thead><tr>
+<th>优先级</th>
+<th>内容</th>
+<th>复习目标</th>
+</tr></thead><tbody>
+<tr>
+<td>重点</td>
+<td>VAE 数学原理、KL 正则项、重参数化技巧、Diffusion 的去噪模型设计与训练流程</td>
+<td>能讲清每个分布的含义、为什么要引入 Encoder、为什么 KL 是正则项、为什么重参数化后能反传、扩散模型到底训练什么</td>
+</tr>
+<tr>
+<td>了解</td>
+<td>GAN 的模型架构、生成器与判别器、损失函数与优化策略、Diffusion 的隐空间扩散</td>
+<td>能说清基本流程、训练目标、为什么 Stable Diffusion 要在隐空间里做扩散</td>
+</tr>
+<tr>
+<td>简单带过</td>
+<td>Flow Matching、Stable Diffusion 的应用意义、VAE/GAN/Diffusion/FM 的发展脉络</td>
+<td>知道名字、核心思想、和扩散模型的大致区别即可</td>
+</tr>
+</tbody></table>
+</section>
+<section class="section" id="dv-generative-goal"><h2>1. 生成模型到底在学什么 <span class="tag know">了解</span></h2>
+<p>生成模型的目标不是给图片分类，而是学习真实数据的分布。假设真实图像来自一个复杂分布：</p>
+<div class="formula">
+$$
+p_{\text{data}}(x)
+$$
+</div>
+<p>模型希望学到一个近似分布：</p>
+<div class="formula">
+$$
+p_\theta(x)\approx p_{\text{data}}(x)
+$$
+</div>
+<p>训练好以后，从模型分布中采样，就能得到新图像。课件这一章主要讲四类生成模型：</p>
+<ul>
+<li>VAE：把图像编码到隐空间，再从隐空间解码生成图像。</li>
+<li>GAN：生成器和判别器对抗训练，让生成图像越来越像真实图像。</li>
+<li>Diffusion Model：从真实图像逐步加噪，再学习从噪声逐步去噪生成图像。</li>
+<li>Flow Matching：学习从噪声分布到图像分布的连续传输路径。</li>
+</ul>
+<p>这章重点是 VAE 和 Diffusion。GAN 知道基本架构和博弈目标即可；Flow Matching 只需要知道它也是“从噪声到数据”的生成路线。</p>
+</section>
+<section class="section" id="dv-vae-motivation"><h2>2. VAE 的核心动机 <span class="tag important">重点</span></h2>
+<p>图像维度很高。例如一张 <code>256 x 256 x 3</code> 的彩色图像接近二十万维。直接在像素空间里随机采样，大多数结果都没有意义。</p>
+<p>VAE 的思路是：不要直接在高维像素空间里采样，而是学习一个低维隐空间。</p>
+<p>普通自编码器是：</p>
+<div class="formula">
+$$
+x \rightarrow \text{Encoder} \rightarrow z \rightarrow \text{Decoder} \rightarrow x&#x27;
+$$
+</div>
+<p>其中 <code>x</code> 是输入图像，<code>z</code> 是低维隐变量，<code>x&#x27;</code> 是重建图像。普通自编码器主要追求：</p>
+<div class="formula">
+$$
+x&#x27;\approx x
+$$
+</div>
+<p>问题是，普通自编码器通常把一张图压成一个确定的点：</p>
+<div class="formula">
+$$
+x_1\rightarrow z_1,\quad x_2\rightarrow z_2,\quad x_3\rightarrow z_3
+$$
+</div>
+<p>这样隐空间可能是破碎的。Decoder 只见过训练样本对应的少数点，随机采一个没见过的 <code>z</code>，可能落在空白区域，生成结果就容易崩。</p>
+<p>VAE 的关键改动是：</p>
+<blockquote>Encoder 不输出一个确定向量，而是输出一个分布。</blockquote>
+<p>也就是：</p>
+<div class="formula">
+$$
+q_\phi(z|x)=N(\mu,\sigma^2)
+$$
+</div>
+<p>这里 <code>q_\phi(z|x)</code> 表示：给定图片 <code>x</code>，Encoder 认为它可能对应哪些隐变量 <code>z</code>。</p>
+<h3><code>q(z|x)</code> 是二维分布吗</h3>
+<p>不一定。它是几维，取决于你设定的隐变量 <code>z</code> 是几维。</p>
+<p>如果 latent dim = 2：</p>
+<div class="formula">
+$$
+z=[z_1,z_2]
+$$
+</div>
+<p>那么 <code>q(z|x)</code> 是二维高斯分布，采样一次就是一个二维点。</p>
+<p>如果 latent dim = 128：</p>
+<div class="formula">
+$$
+z\in R^{128},\quad \mu\in R^{128},\quad \sigma\in R^{128}
+$$
+</div>
+<p>那么采样一次得到的是一个 128 维向量。课件中画二维通常只是为了方便可视化。</p>
+<p>实际 VAE 常用对角高斯：</p>
+<div class="formula">
+$$
+q_\phi(z|x)=N(\mu,\operatorname{diag}(\sigma^2))
+$$
+</div>
+<p>意思是每个维度独立采样：</p>
+<div class="formula">
+$$
+z_i\sim N(\mu_i,\sigma_i^2)
+$$
+</div>
+</section>
+<section class="section" id="dv-vae-math"><h2>3. VAE 的数学原理 <span class="tag important">重点</span></h2>
+<p>VAE 的生成假设是：</p>
+<div class="formula">
+$$
+z\sim p(z),\qquad x\sim p_\theta(x|z)
+$$
+</div>
+<p>其中：</p>
+<ul>
+<li><code>p(z)</code>：先验分布，通常取标准正态分布 <code>N(0,I)</code>。</li>
+<li><code>p_\theta(x|z)</code>：Decoder 分布，表示给定隐变量 <code>z</code> 后生成图像 <code>x</code> 的概率。</li>
+<li><code>p_\theta(x)</code>：模型整体认为图像 <code>x</code> 出现的概率。</li>
+</ul>
+<p>真正想最大化的是训练集中真实图像的似然：</p>
+<div class="formula">
+$$
+\max_\theta \log p_\theta(x)
+$$
+</div>
+<p>而：</p>
+<div class="formula">
+$$
+p_\theta(x)=\int p(z)p_\theta(x|z)\,dz
+$$
+</div>
+<p>这句话的意思是：某张图 <code>x</code> 的概率，等于所有可能的 <code>z</code> 生成它的概率加起来。</p>
+<p>问题是这个积分很难算。<code>z</code> 可能是几十维或几百维的连续变量，直接从整个 <code>p(z)</code> 里取遍所有值几乎不可行。</p>
+<h3>为什么要引入 <code>q_\phi(z|x)</code></h3>
+<p>你之前理解的“缩小范围”是对的，但要再精确一点：</p>
+<blockquote><code>q_\phi(z|x)</code> 是训练时针对当前图片 <code>x</code> 的搜索分布，用来告诉模型哪些 <code>z</code> 更可能和这张图有关。</blockquote>
+<p>原本要从整个先验分布里考虑：</p>
+<div class="formula">
+$$
+z\sim p(z)
+$$
+</div>
+<p>但对一张猫图来说，大部分随机 <code>z</code> 可能和这张猫没有关系。Encoder 于是输出：</p>
+<div class="formula">
+$$
+q_\phi(z|x)
+$$
+</div>
+<p>它相当于在说：当前这张图比较可能来自隐空间的这一小片区域。</p>
+<p>所以训练时变成：</p>
+<div class="formula">
+$$
+z\sim q_\phi(z|x)
+$$
+</div>
+<p>再把 <code>z</code> 交给 Decoder 重建 <code>x</code>。</p>
+<p>不过注意：<code>q_\phi(z|x)</code> 不是生成时用来采样的最终分布。生成时仍然用公共先验：</p>
+<div class="formula">
+$$
+z\sim p(z)=N(0,I)
+$$
+</div>
+<p><code>q_\phi(z|x)</code> 的作用是在训练中帮助 Decoder 学会隐空间到图像的对应关系。</p>
+<h3><code>p_\theta(z|x)</code> 和 <code>q_\phi(z|x)</code> 的区别</h3>
+<p>真实后验是：</p>
+<div class="formula">
+$$
+p_\theta(z|x)=\frac{p_\theta(x|z)p(z)}{p_\theta(x)}
+$$
+</div>
+<p>它表示：给定图片 <code>x</code>，最可能对应哪些隐变量 <code>z</code>。</p>
+<p>但它里面含有 <code>p_\theta(x)</code>，而 <code>p_\theta(x)</code> 又是那个算不动的积分，所以 <code>p_\theta(z|x)</code> 也算不动。</p>
+<p>于是 VAE 引入一个可训练的近似分布：</p>
+<div class="formula">
+$$
+q_\phi(z|x)\approx p_\theta(z|x)
+$$
+</div>
+<p>这就是“变分推断”，也是 VAE 中“变分”的来源。</p>
+<details>
+<summary>展开：ELBO 推导看不懂时怎么抓主线</summary>
+<p>我们想最大化：</p>
+<div class="formula">
+$$
+\log p_\theta(x)
+$$
+</div>
+<p>但它不好直接算。引入任意分布 <code>q_\phi(z|x)</code> 后，可以得到一个下界：</p>
+<div class="formula">
+$$
+\log p_\theta(x)\ge
+E_{q_\phi(z|x)}[\log p_\theta(x|z)]-
+KL(q_\phi(z|x)\|p(z))
+$$
+</div>
+<p>这个下界叫 ELBO。最大化 ELBO，就等价于间接提高 <code>log p_\theta(x)</code>。</p>
+<p>其中第一项：</p>
+<div class="formula">
+$$
+E_{q_\phi(z|x)}[\log p_\theta(x|z)]
+$$
+</div>
+<p>要求 Decoder 从采样到的 <code>z</code> 还原 <code>x</code>，所以对应重建项。</p>
+<p>第二项：</p>
+<div class="formula">
+$$
+KL(q_\phi(z|x)\|p(z))
+$$
+</div>
+<p>要求 Encoder 输出的分布靠近标准正态先验，所以对应 KL 正则项。</p>
+<p>训练时通常最小化负 ELBO：</p>
+<div class="formula">
+$$
+L_{\text{VAE}}
+=
+-E_{q_\phi(z|x)}[\log p_\theta(x|z)]
++
+KL(q_\phi(z|x)\|p(z))
+$$
+</div>
+<p>所以可以记成：</p>
+<div class="formula">
+$$
+\text{VAE Loss}=\text{重建损失}+\text{KL 正则项}
+$$
+</div>
+</details>
+</section>
+<section class="section" id="dv-vae-loss"><h2>4. VAE 损失函数：重建项和 KL 正则项 <span class="tag important">重点</span></h2>
+<p>VAE 损失有两部分：</p>
+<div class="formula">
+$$
+L_{\text{VAE}}=L_{\text{recon}}+L_{\text{KL}}
+$$
+</div>
+<h3>重建损失管什么</h3>
+<p>重建损失负责让生成图像像原图：</p>
+<div class="formula">
+$$
+x&#x27;\approx x
+$$
+</div>
+<p>实际图像任务中常用 MSE：</p>
+<div class="formula">
+$$
+L_{\text{recon}}=\|x-x&#x27;\|^2
+$$
+</div>
+<p>它追求的是“重建精度”。如果只有这项，模型会尽量把每张图的信息塞进 <code>z</code>，使 Decoder 还原得越像越好。</p>
+<h3>KL 散度为什么叫正则项</h3>
+<p>KL 正则项负责约束 Encoder 输出的分布：</p>
+<div class="formula">
+$$
+KL(q_\phi(z|x)\|p(z))
+$$
+</div>
+<p>通常：</p>
+<div class="formula">
+$$
+p(z)=N(0,I)
+$$
+</div>
+<p>所以 KL 项的意思是：</p>
+<div class="formula">
+$$
+q_\phi(z|x)\quad \text{不要离}\quad N(0,I)\quad \text{太远}
+$$
+</div>
+<p>这就是课件里“正则项”的标准含义。更准确地说：</p>
+<ul>
+<li>生成精度项 = 重建损失。</li>
+<li>正则项 = KL 散度。</li>
+</ul>
+<p>如果课件某处让人感觉“生成精度也是正则项”，可以理解为它想表达“总损失里有两个约束”，但机器学习术语里真正的正则项通常指 KL 散度这一项。</p>
+<h3>为什么不能只要重建损失</h3>
+<p>如果只追求重建精度，模型会倾向于让：</p>
+<div class="formula">
+$$
+\sigma\rightarrow 0
+$$
+</div>
+<p>也就是每张图的分布退化成一个点。这样 VAE 又变回普通自编码器：</p>
+<div class="formula">
+$$
+x\rightarrow z\rightarrow x&#x27;
+$$
+</div>
+<p>隐空间重新变得破碎，随机采样时容易落到 Decoder 没见过的区域。</p>
+<p>KL 项的作用是防止这种退化：</p>
+<div class="formula">
+$$
+q_\phi(z|x)\approx N(0,I)
+$$
+</div>
+<p>这样训练集中不同图像对应的分布会被规整到同一个公共隐空间里，区域之间有更多重叠和过渡。</p>
+<h3>训练后不用 Encoder，那为什么还能生成</h3>
+<p>训练阶段：</p>
+<div class="formula">
+$$
+x_i\rightarrow q_\phi(z|x_i)\rightarrow z_i\rightarrow \text{Decoder}\rightarrow x_i&#x27;
+$$
+</div>
+<p>每张图确实对应不同的分布。但是 KL 项不断把这些分布往同一个标准正态分布拉：</p>
+<div class="formula">
+$$
+q_\phi(z|x_i)\approx N(0,I)
+$$
+</div>
+<p>所以 Decoder 在训练中学到的是：</p>
+<blockquote>标准正态隐空间里的不同区域，对应不同类型的图像。</blockquote>
+<p>训练结束后，Encoder 的整理工作已经完成。生成时直接：</p>
+<div class="formula">
+$$
+z\sim N(0,I),\qquad x=\text{Decoder}(z)
+$$
+</div>
+<p>这不是说“所有图片都来自同一个具体样本的分布”，而是说：从公共隐空间分布里随机抽一个坐标点，Decoder 把这个点翻译成图像。</p>
+<h3>抽歪一点会不会完全变成别的东西</h3>
+<p>理想情况下不会。VAE 的训练目标会推动隐空间变得平滑：</p>
+<div class="formula">
+$$
+z\text{ 稍微变化}\rightarrow x\text{ 稍微变化}
+$$
+</div>
+<p>原因有两个：</p>
+<ul>
+<li>Encoder 输出的是分布，不是点。同一张图附近的一团 <code>z</code> 都要能重建相似图像。</li>
+<li>KL 项让不同样本分布靠近公共正态分布，减少孤立点和空白区域。</li>
+</ul>
+<p>但这不是绝对保证。VAE 训练不好、KL 太弱或隐空间组织不理想时，仍然可能采到奇怪区域。</p>
+<details>
+<summary>展开：对角高斯 KL 的解析式</summary>
+<p>若：</p>
+<div class="formula">
+$$
+q_\phi(z|x)=N(\mu,\operatorname{diag}(\sigma^2)),\qquad p(z)=N(0,I)
+$$
+</div>
+<p>则 KL 有解析解：</p>
+<div class="formula">
+$$
+KL(q_\phi(z|x)\|p(z))
+=
+\frac{1}{2}\sum_i
+(\mu_i^2+\sigma_i^2-\log\sigma_i^2-1)
+$$
+</div>
+<p>代码里常用 <code>log_var=log(sigma^2)</code>，写成：</p>
+<div class="formula">
+$$
+L_{\text{KL}}
+=
+-\frac{1}{2}\sum_i
+(1+\log\sigma_i^2-\mu_i^2-\sigma_i^2)
+$$
+</div>
+<p>两种写法本质一样。</p>
+</details>
+</section>
+<section class="section" id="dv-reparameterization"><h2>5. 重参数化技巧 <span class="tag important">重点</span></h2>
+<p>VAE 训练时需要从 Encoder 输出的分布中采样：</p>
+<div class="formula">
+$$
+z\sim N(\mu,\sigma^2)
+$$
+</div>
+<p>问题是，直接采样像一个黑盒：</p>
+<div class="formula">
+$$
+(\mu,\sigma)\rightarrow \text{sample}\rightarrow z
+$$
+</div>
+<p>反向传播时很难知道 <code>\mu</code> 或 <code>\sigma</code> 变化一点，采样结果 <code>z</code> 会怎么变化。</p>
+<p>重参数化技巧把采样改写为：</p>
+<div class="formula">
+$$
+\epsilon\sim N(0,I)
+$$
+</div>
+<div class="formula">
+$$
+z=\mu+\sigma\cdot \epsilon
+$$
+</div>
+<p>随机性被移动到外部噪声 <code>\epsilon</code> 上，而 <code>\epsilon</code> 不依赖网络参数。</p>
+<h3>为什么这样就能算梯度</h3>
+<p>一次前向传播中，先随机采到一个 <code>\epsilon</code>。采到之后，在这一次计算图里它就是一个固定常数。</p>
+<p>例如：</p>
+<div class="formula">
+$$
+\epsilon=0.7
+$$
+</div>
+<p>则：</p>
+<div class="formula">
+$$
+z=\mu+0.7\sigma
+$$
+</div>
+<p>这就是普通可导函数：</p>
+<div class="formula">
+$$
+\frac{\partial z}{\partial \mu}=1,\qquad
+\frac{\partial z}{\partial \sigma}=\epsilon
+$$
+</div>
+<p>你之前问得很关键：<code>\partial z/\partial \sigma=\epsilon</code>，而 <code>\epsilon</code> 是随机的，怎么梯度下降？</p>
+<p>答案是：<strong>随机梯度不是不能用，它是对真实期望梯度的随机估计。</strong></p>
+<p>训练真正优化的是：</p>
+<div class="formula">
+$$
+E_{z\sim N(\mu,\sigma^2)}[L(z)]
+$$
+</div>
+<p>重参数化后等价于：</p>
+<div class="formula">
+$$
+E_{\epsilon\sim N(0,I)}[L(\mu+\sigma\epsilon)]
+$$
+</div>
+<p>每次采一个或几个 <code>\epsilon</code>，就像 mini-batch SGD 每次只采一小批样本一样，用随机估计来更新参数。单次梯度会有噪声，但长期平均方向是对的。</p>
+<details>
+<summary>展开：一个一维例子说明随机梯度为什么可用</summary>
+<p>假设：</p>
+<div class="formula">
+$$
+L(z)=z^2,\qquad z=\mu+\sigma\epsilon
+$$
+</div>
+<p>则：</p>
+<div class="formula">
+$$
+L=(\mu+\sigma\epsilon)^2
+$$
+</div>
+<p>对 <code>\mu</code> 和 <code>\sigma</code> 求导：</p>
+<div class="formula">
+$$
+\frac{\partial L}{\partial \mu}=2(\mu+\sigma\epsilon)
+$$
+</div>
+<div class="formula">
+$$
+\frac{\partial L}{\partial \sigma}=2(\mu+\sigma\epsilon)\epsilon
+$$
+</div>
+<p>它们确实包含随机的 <code>\epsilon</code>。但取期望后：</p>
+<div class="formula">
+$$
+E[2(\mu+\sigma\epsilon)]=2\mu
+$$
+</div>
+<div class="formula">
+$$
+E[2(\mu+\sigma\epsilon)\epsilon]=2\sigma
+$$
+</div>
+<p>这正好是：</p>
+<div class="formula">
+$$
+E[z^2]=\mu^2+\sigma^2
+$$
+</div>
+<p>的真实梯度：</p>
+<div class="formula">
+$$
+\frac{\partial}{\partial\mu}=2\mu,\qquad
+\frac{\partial}{\partial\sigma}=2\sigma
+$$
+</div>
+<p>所以重参数化后的梯度虽然每次随机，但在统计意义上是正确的。</p>
+</details>
+</section>
+<section class="section" id="dv-vae-generation"><h2>6. VAE 的生成能力与局限 <span class="tag know">了解</span></h2>
+<p>VAE 的生成流程是：</p>
+<div class="formula">
+$$
+z\sim N(0,I)
+$$
+</div>
+<div class="formula">
+$$
+x=\text{Decoder}(z)
+$$
+</div>
+<p>它能生成训练集中没见过的新图像，是因为训练时 Decoder 已经学习了公共隐空间到图像空间的映射。</p>
+<p>但普通 VAE 生成不可控。你不知道哪个 <code>z</code> 精确对应“白猫”“汽车”“某种风格”。如果要控制生成，需要额外条件，例如类别标签或文本：</p>
+<div class="formula">
+$$
+p_\theta(x|z,c)
+$$
+</div>
+<p>其中 <code>c</code> 是条件信息。</p>
+<p>VAE 另一个常见缺点是图像容易模糊。原因是像素级 MSE 倾向于平均多种可能结果。比如两张语义上都是猫的图，像素位置可能差很多，MSE 会鼓励模型生成平滑的折中结果。</p>
+<p>这也是课件随后引出 GAN 的原因：GAN 不只看像素误差，而是通过判别器学习“像不像真实图像”的分布级信号。</p>
+</section>
+<section class="section" id="dv-gan"><h2>7. GAN 基本架构 <span class="tag know">了解</span></h2>
+<p>GAN 包含两个网络：</p>
+<ul>
+<li>生成器 <code>G</code>：输入随机噪声 <code>z</code>，输出假图像 <code>G(z)</code>。</li>
+<li>判别器 <code>D</code>：输入一张图，判断它是真图还是假图。</li>
+</ul>
+<p>训练目标是对抗博弈：</p>
+<div class="formula">
+$$
+\min_G\max_D V(D,G)
+$$
+</div>
+<p>经典损失写作：</p>
+<div class="formula">
+$$
+V(D,G)
+=
+E_{x\sim p_{\text{data}}}[\log D(x)]
++
+E_{z\sim p(z)}[\log(1-D(G(z)))]
+$$
+</div>
+<p>判别器希望：</p>
+<div class="formula">
+$$
+D(x)\rightarrow 1,\qquad D(G(z))\rightarrow 0
+$$
+</div>
+<p>生成器希望：</p>
+<div class="formula">
+$$
+D(G(z))\rightarrow 1
+$$
+</div>
+<p>训练时交替优化：</p>
+<ul>
+<li>固定 <code>G</code>，训练 <code>D</code> 区分真图和假图。</li>
+<li>固定 <code>D</code>，训练 <code>G</code> 让假图骗过 <code>D</code>。</li>
+</ul>
+<p>当生成分布和真实分布完全一致时：</p>
+<div class="formula">
+$$
+p_G(x)=p_{\text{data}}(x)
+$$
+</div>
+<p>此时判别器无法区分真假：</p>
+<div class="formula">
+$$
+D(x)=\frac{1}{2}
+$$
+</div>
+<p>课件里还提到理论上最优判别器会把生成器目标转化为真实分布与生成分布之间的 JS 散度。复习时知道结论即可：GAN 的目标是让生成分布逼近真实图像分布。</p>
+</section>
+<section class="section" id="dv-diffusion-overview"><h2>8. Diffusion Model 总览 <span class="tag important">重点</span></h2>
+<p>扩散模型的核心是两条过程：</p>
+<ul>
+<li>前向过程：从真实图像开始，逐步加噪，最后接近纯高斯噪声。</li>
+<li>反向过程：从纯噪声开始，逐步去噪，最后生成图像。</li>
+</ul>
+<p>直观流程：</p>
+<div class="formula">
+$$
+x_0\rightarrow x_1\rightarrow x_2\rightarrow \cdots \rightarrow x_T
+$$
+</div>
+<p>其中 <code>x_0</code> 是真实图像，<code>x_T</code> 接近纯噪声。</p>
+<p>生成时反过来：</p>
+<div class="formula">
+$$
+x_T\rightarrow x_{T-1}\rightarrow \cdots \rightarrow x_0
+$$
+</div>
+<p>前向加噪可以直接人为定义，因为我们知道怎么加高斯噪声。难点是反向去噪：模型要学会每一步该去掉什么噪声。</p>
+<p>所以 Diffusion 的本质可以记成：</p>
+<blockquote>训练一个噪声预测网络，让它在任意时间步 <code>t</code> 看见含噪图 <code>x_t</code> 后，预测当初加进去的噪声。</blockquote>
+</section>
+<section class="section" id="dv-diffusion-denoiser"><h2>9. Diffusion 去噪模型设计 <span class="tag important">重点</span></h2>
+<p>课件给出两个思路。</p>
+<p>思路一：直接预测加噪前图像。</p>
+<div class="formula">
+$$
+x_t\rightarrow \text{Model}\rightarrow x_{t-1}\ \text{或}\ x_0
+$$
+</div>
+<p>问题是图像分布复杂，猫、车、人脸、风景差异很大，直接预测干净图像学习难度高。</p>
+<p>思路二：预测噪声。</p>
+<div class="formula">
+$$
+x_t,t\rightarrow \epsilon_\theta(x_t,t)
+$$
+</div>
+<p>然后用预测噪声去还原更干净的图像。</p>
+<p>为什么预测噪声更容易？因为无论原图是什么，加入的噪声都来自高斯分布：</p>
+<div class="formula">
+$$
+\epsilon\sim N(0,I)
+$$
+</div>
+<p>噪声的统计规律比图像本身简单，模型更容易学习。</p>
+</section>
+<section class="section" id="dv-diffusion-training"><h2>10. Diffusion 训练流程 <span class="tag important">重点</span></h2>
+<p>朴素做法是从 <code>x_0</code> 开始一步步加噪，同时训练模型预测每一步噪声。但这样有两个问题：</p>
+<ul>
+<li>训练顺序固定，前期只学低噪声，后期只学高噪声，优化不稳定。</li>
+<li>如果每次随机时间步 <code>t</code> 都要真的加噪 <code>t</code> 次，计算很浪费。</li>
+</ul>
+<p>改进做法是：随机采样时间步 <code>t</code>，并用闭式公式一步得到 <code>x_t</code>。</p>
+<p>常见前向加噪公式是：</p>
+<div class="formula">
+$$
+x_t=\sqrt{\bar{\alpha}_t}x_0+\sqrt{1-\bar{\alpha}_t}\epsilon
+$$
+</div>
+<p>其中：</p>
+<ul>
+<li><code>x_0</code>：干净图像。</li>
+<li><code>t</code>：随机采样的时间步。</li>
+<li><code>\epsilon\sim N(0,I)</code>：真实加入的噪声。</li>
+<li><code>\bar{\alpha}_t</code>：由噪声强度累计得到的系数，控制第 <code>t</code> 步保留多少原图信息。</li>
+</ul>
+<p>训练时，模型输入：</p>
+<div class="formula">
+$$
+(x_t,t)
+$$
+</div>
+<p>模型输出：</p>
+<div class="formula">
+$$
+\epsilon_\theta(x_t,t)
+$$
+</div>
+<p>损失函数是预测噪声和真实噪声的 L2 损失：</p>
+<div class="formula">
+$$
+L_{\text{diffusion}}
+=
+\|\epsilon-\epsilon_\theta(x_t,t)\|^2
+$$
+</div>
+<h3>训练流程一页版</h3>
+<ol>
+<li>从训练集中随机取一张图 <code>x_0</code>。</li>
+<li>随机采样时间步 <code>t</code>。</li>
+<li>随机采样高斯噪声 <code>\epsilon</code>。</li>
+<li>用公式一步构造含噪图 <code>x_t</code>。</li>
+<li>让模型根据 <code>x_t</code> 和 <code>t</code> 预测噪声。</li>
+<li>用 <code>\|\epsilon-\epsilon_\theta(x_t,t)\|^2</code> 更新模型。</li>
+</ol>
+<details>
+<summary>展开：为什么可以一步得到任意时间步的含噪图</summary>
+<p>每一步加噪可写成：</p>
+<div class="formula">
+$$
+x_t=\sqrt{\alpha_t}x_{t-1}+\sqrt{1-\alpha_t}\epsilon_t
+$$
+</div>
+<p>不断递归展开，可以得到：</p>
+<div class="formula">
+$$
+x_t=\sqrt{\bar{\alpha}_t}x_0+\sqrt{1-\bar{\alpha}_t}\epsilon
+$$
+</div>
+<p>其中：</p>
+<div class="formula">
+$$
+\bar{\alpha}_t=\prod_{s=1}^{t}\alpha_s
+$$
+</div>
+<p>关键点是：多个独立高斯噪声的线性组合仍然是高斯噪声，所以可以把多步噪声合并成一个新的 <code>\epsilon\sim N(0,I)</code>。</p>
+<p>这就是课件里“多步加噪变成单步加噪即可得到训练数据”的数学原因。</p>
+</details>
+</section>
+<section class="section" id="dv-diffusion-inference"><h2>11. Diffusion 推理与条件生成 <span class="tag important">重点</span></h2>
+<p>推理阶段从纯噪声开始：</p>
+<div class="formula">
+$$
+x_T\sim N(0,I)
+$$
+</div>
+<p>然后循环执行：</p>
+<div class="formula">
+$$
+x_t\rightarrow x_{t-1}
+$$
+</div>
+<p>每一步模型预测当前噪声：</p>
+<div class="formula">
+$$
+\epsilon_\theta(x_t,t)
+$$
+</div>
+<p>再根据预测结果去掉一部分噪声。课件还提到，去噪后通常会加入一定随机噪声，这样可以增加生成多样性，也能缓解误差累积。</p>
+<h3>为什么普通扩散生成不可控</h3>
+<p>如果输入只有随机噪声：</p>
+<div class="formula">
+$$
+x_T\sim N(0,I)
+$$
+</div>
+<p>模型只能随机生成图像。它不知道你想要猫、车还是风景。</p>
+<p>要可控生成，就要加入条件：</p>
+<div class="formula">
+$$
+\epsilon_\theta(x_t,t,c)
+$$
+</div>
+<p>其中 <code>c</code> 可以是类别标签、文本向量、边缘图、深度图等。</p>
+<p>文生图时，文本不是直接变成一个 VAE 向量，而是作为条件参与每一步去噪：</p>
+<div class="formula">
+$$
+\text{prompt}\rightarrow \text{text encoder}\rightarrow c
+$$
+</div>
+<div class="formula">
+$$
+\epsilon_\theta(x_t,t,c)
+$$
+</div>
+<p>也就是说：</p>
+<blockquote>文本指导模型每一步“应该往哪个方向去噪”，最后随机噪声逐渐变成符合文字描述的图像。</blockquote>
+<p>这正好回答之前那个疑问：模型不是先知道某个隐空间向量精确对应“白猫”，而是在大量图文配对训练中学会“文本条件如何改变去噪方向”。</p>
+</section>
+<section class="section" id="dv-latent-diffusion"><h2>12. 隐空间扩散与 Stable Diffusion <span class="tag important">重点/了解</span></h2>
+<p>普通扩散如果直接在像素空间做去噪，计算量很大。例如 <code>512 x 512</code> 图像有 262,144 个像素位置，还要多步迭代去噪，速度和显存压力都很高。</p>
+<p>Stable Diffusion 使用 Latent Diffusion 的思想：先用 VAE 把图像压到低维隐空间，再在隐空间里做扩散。</p>
+<p>大致流程：</p>
+<div class="formula">
+$$
+x\rightarrow \text{VAE Encoder}\rightarrow z
+$$
+</div>
+<p>在训练扩散模型时，对隐变量 <code>z</code> 加噪、预测噪声、计算损失。</p>
+<p>生成时：</p>
+<div class="formula">
+$$
+z_T\sim N(0,I)
+$$
+</div>
+<div class="formula">
+$$
+\text{text prompt}\rightarrow \text{text encoder}\rightarrow c
+$$
+</div>
+<div class="formula">
+$$
+z_T\rightarrow z_{T-1}\rightarrow\cdots\rightarrow z_0
+$$
+</div>
+<p>最后：</p>
+<div class="formula">
+$$
+z_0\rightarrow \text{VAE Decoder}\rightarrow x
+$$
+</div>
+<p>所以 Stable Diffusion 里，VAE 主要负责：</p>
+<div class="formula">
+$$
+\text{像素图像}\leftrightarrow \text{压缩隐空间}
+$$
+</div>
+<p>真正决定“根据文字生成什么”的，是文本编码器和条件去噪网络。</p>
+<p>这也解释了之前的问题：</p>
+<ul>
+<li>普通 VAE：从 <code>N(0,I)</code> 抽一个 <code>z</code>，Decoder 随机生成，不好控制。</li>
+<li>文生图扩散：从随机隐空间噪声开始，文本条件持续指导去噪，最终得到符合 prompt 的隐变量，再交给 VAE Decoder 解码。</li>
+</ul>
+</section>
+<section class="section" id="dv-flow-matching"><h2>13. Flow Matching <span class="tag pass">简单带过</span></h2>
+<p>Flow Matching 也是从噪声生成图像，但它强调学习一条从噪声分布到数据分布的连续路径。</p>
+<p>课件中的直观说法是：</p>
+<div class="formula">
+$$
+x_0\rightarrow x_{0.25}\rightarrow x_{0.5}\rightarrow x_{0.75}\rightarrow x_1
+$$
+</div>
+<p>其中 <code>x_0</code> 来自噪声分布，<code>x_1</code> 来自图像分布。模型学习的是沿着路径把噪声搬运到图像的速度场或方向。</p>
+<p>只需要记住：</p>
+<ul>
+<li>Diffusion：常理解为多步加噪、再多步去噪。</li>
+<li>Flow Matching：直接学习从噪声到数据的连续传输路径。</li>
+<li>现在一些前沿生成模型会使用 Flow Matching 或相关思想。</li>
+</ul>
+</section>
+<section class="section" id="dv-summary"><h2>14. 一页速记</h2>
+<table>
+<thead><tr>
+<th>模型</th>
+<th>核心思想</th>
+<th>重点记忆</th>
+</tr></thead><tbody>
+<tr>
+<td>VAE</td>
+<td>Encoder 输出分布，Decoder 从隐变量生成图像</td>
+<td><code>Loss = 重建损失 + KL 正则项</code>；`q(z</td>
+<td>x)<code> 是训练时针对当前样本的近似后验；生成时从 </code>N(0,I)` 采样</td>
+</tr>
+<tr>
+<td>GAN</td>
+<td>生成器和判别器对抗训练</td>
+<td><code>G</code> 想骗过 <code>D</code>，<code>D</code> 想区分真假；交替优化；理论目标是让 <code>p_G</code> 逼近 <code>p_data</code></td>
+</tr>
+<tr>
+<td>Diffusion</td>
+<td>先把图像加噪成高斯噪声，再学习反向去噪</td>
+<td>模型主要预测噪声；训练随机采样时间步；损失是预测噪声和真实噪声的 L2</td>
+</tr>
+<tr>
+<td>Stable Diffusion</td>
+<td>在 VAE 隐空间中做条件扩散</td>
+<td>文本不是直接变成图像向量，而是指导每一步去噪；最后用 VAE Decoder 解码</td>
+</tr>
+<tr>
+<td>Flow Matching</td>
+<td>学习从噪声到数据的传输路径</td>
+<td>知道概念即可：从噪声分布沿连续路径走向图像分布</td>
+</tr>
+</tbody></table>
+<p>最容易混的几个点：</p>
+<ul>
+<li><code>q_\phi(z|x)</code> 是 Encoder 给当前图片预测的隐变量分布，不是生成时最终使用的分布。</li>
+<li>生成时不用 Encoder，是因为训练时 KL 已经把各样本的隐变量分布规整到公共 <code>N(0,I)</code> 隐空间。</li>
+<li>KL 散度才是 VAE 的正则项；重建损失负责生成精度。</li>
+<li>重参数化后 <code>\epsilon</code> 虽然随机，但一次前向中可当常数；梯度是随机估计，可以用于 SGD。</li>
+<li>Diffusion 文生图不是“文字直接找到某个 z”，而是“文字条件指导随机噪声逐步去噪成目标图像”。</li>
+</ul>
+</section>
+
+      <div class="course-divider" id="generative-course">生成式模型</div>
+<section class="hero" id="gen-overview"><h1>生成式模型复习笔记</h1>
+<blockquote>依据第九章《生成式模型》课件、重点截图，以及本轮关于 VAE 隐变量分布、KL 正则项、重参数化技巧、随机采样生成、文生图条件控制的问答整理。红色重点详写；黑色内容以“知道是什么、为什么出现”为主；课件中出现但重点图未列出的内容简单带过。</blockquote>
+</section>
+<section class="section" id="gen-priority"><h2>0. 复习优先级</h2>
+<table>
+<thead><tr>
+<th>优先级</th>
+<th>内容</th>
+<th>复习目标</th>
+</tr></thead><tbody>
+<tr>
+<td>重点</td>
+<td>VAE 数学原理、KL 正则项、重参数化技巧、Diffusion 的去噪模型设计与训练流程</td>
+<td>能讲清每个分布的含义、为什么要引入 Encoder、为什么 KL 是正则项、为什么重参数化后能反传、扩散模型到底训练什么</td>
+</tr>
+<tr>
+<td>了解</td>
+<td>GAN 的模型架构、生成器与判别器、损失函数与优化策略、Diffusion 的隐空间扩散</td>
+<td>能说清基本流程、训练目标、为什么 Stable Diffusion 要在隐空间里做扩散</td>
+</tr>
+<tr>
+<td>简单带过</td>
+<td>Flow Matching、Stable Diffusion 的应用意义、VAE/GAN/Diffusion/FM 的发展脉络</td>
+<td>知道名字、核心思想、和扩散模型的大致区别即可</td>
+</tr>
+</tbody></table>
+</section>
+<section class="section" id="gen-generative-goal"><h2>1. 生成模型到底在学什么 <span class="tag know">了解</span></h2>
+<p>生成模型的目标不是给图片分类，而是学习真实数据的分布。假设真实图像来自一个复杂分布：</p>
+<div class="formula">
+$$
+p_{\text{data}}(x)
+$$
+</div>
+<p>模型希望学到一个近似分布：</p>
+<div class="formula">
+$$
+p_\theta(x)\approx p_{\text{data}}(x)
+$$
+</div>
+<p>训练好以后，从模型分布中采样，就能得到新图像。课件这一章主要讲四类生成模型：</p>
+<ul>
+<li>VAE：把图像编码到隐空间，再从隐空间解码生成图像。</li>
+<li>GAN：生成器和判别器对抗训练，让生成图像越来越像真实图像。</li>
+<li>Diffusion Model：从真实图像逐步加噪，再学习从噪声逐步去噪生成图像。</li>
+<li>Flow Matching：学习从噪声分布到图像分布的连续传输路径。</li>
+</ul>
+<p>这章重点是 VAE 和 Diffusion。GAN 知道基本架构和博弈目标即可；Flow Matching 只需要知道它也是“从噪声到数据”的生成路线。</p>
+</section>
+<section class="section" id="gen-vae-motivation"><h2>2. VAE 的核心动机 <span class="tag important">重点</span></h2>
+<p>图像维度很高。例如一张 <code>256 x 256 x 3</code> 的彩色图像接近二十万维。直接在像素空间里随机采样，大多数结果都没有意义。</p>
+<p>VAE 的思路是：不要直接在高维像素空间里采样，而是学习一个低维隐空间。</p>
+<p>普通自编码器是：</p>
+<div class="formula">
+$$
+x \rightarrow \text{Encoder} \rightarrow z \rightarrow \text{Decoder} \rightarrow x&#x27;
+$$
+</div>
+<p>其中 <code>x</code> 是输入图像，<code>z</code> 是低维隐变量，<code>x&#x27;</code> 是重建图像。普通自编码器主要追求：</p>
+<div class="formula">
+$$
+x&#x27;\approx x
+$$
+</div>
+<p>问题是，普通自编码器通常把一张图压成一个确定的点：</p>
+<div class="formula">
+$$
+x_1\rightarrow z_1,\quad x_2\rightarrow z_2,\quad x_3\rightarrow z_3
+$$
+</div>
+<p>这样隐空间可能是破碎的。Decoder 只见过训练样本对应的少数点，随机采一个没见过的 <code>z</code>，可能落在空白区域，生成结果就容易崩。</p>
+<p>VAE 的关键改动是：</p>
+<blockquote>Encoder 不输出一个确定向量，而是输出一个分布。</blockquote>
+<p>也就是：</p>
+<div class="formula">
+$$
+q_\phi(z|x)=N(\mu,\sigma^2)
+$$
+</div>
+<p>这里 $q_\phi(z|x)$ 表示：给定图片 <code>x</code>，Encoder 认为它可能对应哪些隐变量 <code>z</code>。</p>
+<h3><code>q(z|x)</code> 是二维分布吗</h3>
+<p>不一定。它是几维，取决于你设定的隐变量 <code>z</code> 是几维。</p>
+<p>如果 latent dim = 2：</p>
+<div class="formula">
+$$
+z=[z_1,z_2]
+$$
+</div>
+<p>那么 <code>q(z|x)</code> 是二维高斯分布，采样一次就是一个二维点。</p>
+<p>如果 latent dim = 128：</p>
+<div class="formula">
+$$
+z\in R^{128},\quad \mu\in R^{128},\quad \sigma\in R^{128}
+$$
+</div>
+<p>那么采样一次得到的是一个 128 维向量。课件中画二维通常只是为了方便可视化。</p>
+<p>实际 VAE 常用对角高斯：</p>
+<div class="formula">
+$$
+q_\phi(z|x)=N(\mu,\operatorname{diag}(\sigma^2))
+$$
+</div>
+<p>意思是每个维度独立采样：</p>
+<div class="formula">
+$$
+z_i\sim N(\mu_i,\sigma_i^2)
+$$
+</div>
+</section>
+<section class="section" id="gen-vae-math"><h2>3. VAE 的数学原理 <span class="tag important">重点</span></h2>
+<p>VAE 的生成假设是：</p>
+<div class="formula">
+$$
+z\sim p(z),\qquad x\sim p_\theta(x|z)
+$$
+</div>
+<p>其中：</p>
+<ul>
+<li><code>p(z)</code>：先验分布，通常取标准正态分布 <code>N(0,I)</code>。</li>
+<li>$p_\theta(x|z)$：Decoder 分布，表示给定隐变量 <code>z</code> 后生成图像 <code>x</code> 的概率。</li>
+<li>$p_\theta(x)$：模型整体认为图像 <code>x</code> 出现的概率。</li>
+</ul>
+<p>真正想最大化的是训练集中真实图像的似然：</p>
+<div class="formula">
+$$
+\max_\theta \log p_\theta(x)
+$$
+</div>
+<p>而：</p>
+<div class="formula">
+$$
+p_\theta(x)=\int p(z)p_\theta(x|z)\,dz
+$$
+</div>
+<p>这句话的意思是：某张图 <code>x</code> 的概率，等于所有可能的 <code>z</code> 生成它的概率加起来。</p>
+<p>问题是这个积分很难算。<code>z</code> 可能是几十维或几百维的连续变量，直接从整个 <code>p(z)</code> 里取遍所有值几乎不可行。</p>
+<h3>为什么要引入 $q_\phi(z|x)$</h3>
+<p>你之前理解的“缩小范围”是对的，但要再精确一点：</p>
+<blockquote>$q_\phi(z|x)$ 是训练时针对当前图片 <code>x</code> 的搜索分布，用来告诉模型哪些 <code>z</code> 更可能和这张图有关。</blockquote>
+<p>原本要从整个先验分布里考虑：</p>
+<div class="formula">
+$$
+z\sim p(z)
+$$
+</div>
+<p>但对一张猫图来说，大部分随机 <code>z</code> 可能和这张猫没有关系。Encoder 于是输出：</p>
+<div class="formula">
+$$
+q_\phi(z|x)
+$$
+</div>
+<p>它相当于在说：当前这张图比较可能来自隐空间的这一小片区域。</p>
+<p>所以训练时变成：</p>
+<div class="formula">
+$$
+z\sim q_\phi(z|x)
+$$
+</div>
+<p>再把 <code>z</code> 交给 Decoder 重建 <code>x</code>。</p>
+<p>不过注意：$q_\phi(z|x)$ 不是生成时用来采样的最终分布。生成时仍然用公共先验：</p>
+<div class="formula">
+$$
+z\sim p(z)=N(0,I)
+$$
+</div>
+<p>$q_\phi(z|x)$ 的作用是在训练中帮助 Decoder 学会隐空间到图像的对应关系。</p>
+<h3>$p_\theta(z|x)$ 和 $q_\phi(z|x)$ 的区别</h3>
+<p>真实后验是：</p>
+<div class="formula">
+$$
+p_\theta(z|x)=\frac{p_\theta(x|z)p(z)}{p_\theta(x)}
+$$
+</div>
+<p>它表示：给定图片 <code>x</code>，最可能对应哪些隐变量 <code>z</code>。</p>
+<p>但它里面含有 $p_\theta(x)$，而 $p_\theta(x)$ 又是那个算不动的积分，所以 $p_\theta(z|x)$ 也算不动。</p>
+<p>于是 VAE 引入一个可训练的近似分布：</p>
+<div class="formula">
+$$
+q_\phi(z|x)\approx p_\theta(z|x)
+$$
+</div>
+<p>这就是“变分推断”，也是 VAE 中“变分”的来源。</p>
+<details>
+<summary>展开：ELBO 推导看不懂时怎么抓主线</summary>
+<p>我们想最大化：</p>
+<div class="formula">
+$$
+\log p_\theta(x)
+$$
+</div>
+<p>但它不好直接算。引入任意分布 $q_\phi(z|x)$ 后，可以得到一个下界：</p>
+<div class="formula">
+$$
+\log p_\theta(x)\ge
+E_{q_\phi(z|x)}[\log p_\theta(x|z)]-
+KL(q_\phi(z|x)\|p(z))
+$$
+</div>
+<p>这个下界叫 ELBO。最大化 ELBO，就等价于间接提高 $\log p_\theta(x)$。</p>
+<p>其中第一项：</p>
+<div class="formula">
+$$
+E_{q_\phi(z|x)}[\log p_\theta(x|z)]
+$$
+</div>
+<p>要求 Decoder 从采样到的 <code>z</code> 还原 <code>x</code>，所以对应重建项。</p>
+<p>第二项：</p>
+<div class="formula">
+$$
+KL(q_\phi(z|x)\|p(z))
+$$
+</div>
+<p>要求 Encoder 输出的分布靠近标准正态先验，所以对应 KL 正则项。</p>
+<p>训练时通常最小化负 ELBO：</p>
+<div class="formula">
+$$
+L_{\text{VAE}}
+=
+-E_{q_\phi(z|x)}[\log p_\theta(x|z)]
++
+KL(q_\phi(z|x)\|p(z))
+$$
+</div>
+<p>所以可以记成：</p>
+<div class="formula">
+$$
+\text{VAE Loss}=\text{重建损失}+\text{KL 正则项}
+$$
+</div>
+</details>
+</section>
+<section class="section" id="gen-vae-loss"><h2>4. VAE 损失函数：重建项和 KL 正则项 <span class="tag important">重点</span></h2>
+<p>VAE 损失有两部分：</p>
+<div class="formula">
+$$
+L_{\text{VAE}}=L_{\text{recon}}+L_{\text{KL}}
+$$
+</div>
+<h3>重建损失管什么</h3>
+<p>重建损失负责让生成图像像原图：</p>
+<div class="formula">
+$$
+x&#x27;\approx x
+$$
+</div>
+<p>实际图像任务中常用 MSE：</p>
+<div class="formula">
+$$
+L_{\text{recon}}=\|x-x&#x27;\|^2
+$$
+</div>
+<p>它追求的是“重建精度”。如果只有这项，模型会尽量把每张图的信息塞进 <code>z</code>，使 Decoder 还原得越像越好。</p>
+<h3>KL 散度为什么叫正则项</h3>
+<p>KL 正则项负责约束 Encoder 输出的分布：</p>
+<div class="formula">
+$$
+KL(q_\phi(z|x)\|p(z))
+$$
+</div>
+<p>通常：</p>
+<div class="formula">
+$$
+p(z)=N(0,I)
+$$
+</div>
+<p>所以 KL 项的意思是：</p>
+<div class="formula">
+$$
+q_\phi(z|x)\quad \text{不要离}\quad N(0,I)\quad \text{太远}
+$$
+</div>
+<p>这就是课件里“正则项”的标准含义。更准确地说：</p>
+<ul>
+<li>生成精度项 = 重建损失。</li>
+<li>正则项 = KL 散度。</li>
+</ul>
+<p>如果课件某处让人感觉“生成精度也是正则项”，可以理解为它想表达“总损失里有两个约束”，但机器学习术语里真正的正则项通常指 KL 散度这一项。</p>
+<h3>为什么不能只要重建损失</h3>
+<p>如果只追求重建精度，模型会倾向于让：</p>
+<div class="formula">
+$$
+\sigma\rightarrow 0
+$$
+</div>
+<p>也就是每张图的分布退化成一个点。这样 VAE 又变回普通自编码器：</p>
+<div class="formula">
+$$
+x\rightarrow z\rightarrow x&#x27;
+$$
+</div>
+<p>隐空间重新变得破碎，随机采样时容易落到 Decoder 没见过的区域。</p>
+<p>KL 项的作用是防止这种退化：</p>
+<div class="formula">
+$$
+q_\phi(z|x)\approx N(0,I)
+$$
+</div>
+<p>这样训练集中不同图像对应的分布会被规整到同一个公共隐空间里，区域之间有更多重叠和过渡。</p>
+<h3>训练后不用 Encoder，那为什么还能生成</h3>
+<p>训练阶段：</p>
+<div class="formula">
+$$
+x_i\rightarrow q_\phi(z|x_i)\rightarrow z_i\rightarrow \text{Decoder}\rightarrow x_i&#x27;
+$$
+</div>
+<p>每张图确实对应不同的分布。但是 KL 项不断把这些分布往同一个标准正态分布拉：</p>
+<div class="formula">
+$$
+q_\phi(z|x_i)\approx N(0,I)
+$$
+</div>
+<p>所以 Decoder 在训练中学到的是：</p>
+<blockquote>标准正态隐空间里的不同区域，对应不同类型的图像。</blockquote>
+<p>训练结束后，Encoder 的整理工作已经完成。生成时直接：</p>
+<div class="formula">
+$$
+z\sim N(0,I),\qquad x=\text{Decoder}(z)
+$$
+</div>
+<p>这不是说“所有图片都来自同一个具体样本的分布”，而是说：从公共隐空间分布里随机抽一个坐标点，Decoder 把这个点翻译成图像。</p>
+<h3>抽歪一点会不会完全变成别的东西</h3>
+<p>理想情况下不会。VAE 的训练目标会推动隐空间变得平滑：</p>
+<div class="formula">
+$$
+z\text{ 稍微变化}\rightarrow x\text{ 稍微变化}
+$$
+</div>
+<p>原因有两个：</p>
+<ul>
+<li>Encoder 输出的是分布，不是点。同一张图附近的一团 <code>z</code> 都要能重建相似图像。</li>
+<li>KL 项让不同样本分布靠近公共正态分布，减少孤立点和空白区域。</li>
+</ul>
+<p>但这不是绝对保证。VAE 训练不好、KL 太弱或隐空间组织不理想时，仍然可能采到奇怪区域。</p>
+<details>
+<summary>展开：对角高斯 KL 的解析式</summary>
+<p>若：</p>
+<div class="formula">
+$$
+q_\phi(z|x)=N(\mu,\operatorname{diag}(\sigma^2)),\qquad p(z)=N(0,I)
+$$
+</div>
+<p>则 KL 有解析解：</p>
+<div class="formula">
+$$
+KL(q_\phi(z|x)\|p(z))
+=
+\frac{1}{2}\sum_i
+(\mu_i^2+\sigma_i^2-\log\sigma_i^2-1)
+$$
+</div>
+<p>代码里常用 <code>log_var=log(sigma^2)</code>，写成：</p>
+<div class="formula">
+$$
+L_{\text{KL}}
+=
+-\frac{1}{2}\sum_i
+(1+\log\sigma_i^2-\mu_i^2-\sigma_i^2)
+$$
+</div>
+<p>两种写法本质一样。</p>
+</details>
+</section>
+<section class="section" id="gen-reparameterization"><h2>5. 重参数化技巧 <span class="tag important">重点</span></h2>
+<p>VAE 训练时需要从 Encoder 输出的分布中采样：</p>
+<div class="formula">
+$$
+z\sim N(\mu,\sigma^2)
+$$
+</div>
+<p>问题是，直接采样像一个黑盒：</p>
+<div class="formula">
+$$
+(\mu,\sigma)\rightarrow \text{sample}\rightarrow z
+$$
+</div>
+<p>反向传播时很难知道 $\mu$ 或 $\sigma$ 变化一点，采样结果 <code>z</code> 会怎么变化。</p>
+<p>重参数化技巧把采样改写为：</p>
+<div class="formula">
+$$
+\epsilon\sim N(0,I)
+$$
+</div>
+<div class="formula">
+$$
+z=\mu+\sigma\cdot \epsilon
+$$
+</div>
+<p>随机性被移动到外部噪声 $\epsilon$ 上，而 $\epsilon$ 不依赖网络参数。</p>
+<h3>为什么这样就能算梯度</h3>
+<p>一次前向传播中，先随机采到一个 $\epsilon$。采到之后，在这一次计算图里它就是一个固定常数。</p>
+<p>例如：</p>
+<div class="formula">
+$$
+\epsilon=0.7
+$$
+</div>
+<p>则：</p>
+<div class="formula">
+$$
+z=\mu+0.7\sigma
+$$
+</div>
+<p>这就是普通可导函数：</p>
+<div class="formula">
+$$
+\frac{\partial z}{\partial \mu}=1,\qquad
+\frac{\partial z}{\partial \sigma}=\epsilon
+$$
+</div>
+<p>你之前问得很关键：$\partial z/\partial \sigma=\epsilon$，而 $\epsilon$ 是随机的，怎么梯度下降？</p>
+<p>答案是：<strong>随机梯度不是不能用，它是对真实期望梯度的随机估计。</strong></p>
+<p>训练真正优化的是：</p>
+<div class="formula">
+$$
+E_{z\sim N(\mu,\sigma^2)}[L(z)]
+$$
+</div>
+<p>重参数化后等价于：</p>
+<div class="formula">
+$$
+E_{\epsilon\sim N(0,I)}[L(\mu+\sigma\epsilon)]
+$$
+</div>
+<p>每次采一个或几个 $\epsilon$，就像 mini-batch SGD 每次只采一小批样本一样，用随机估计来更新参数。单次梯度会有噪声，但长期平均方向是对的。</p>
+<details>
+<summary>展开：一个一维例子说明随机梯度为什么可用</summary>
+<p>假设：</p>
+<div class="formula">
+$$
+L(z)=z^2,\qquad z=\mu+\sigma\epsilon
+$$
+</div>
+<p>则：</p>
+<div class="formula">
+$$
+L=(\mu+\sigma\epsilon)^2
+$$
+</div>
+<p>对 $\mu$ 和 $\sigma$ 求导：</p>
+<div class="formula">
+$$
+\frac{\partial L}{\partial \mu}=2(\mu+\sigma\epsilon)
+$$
+</div>
+<div class="formula">
+$$
+\frac{\partial L}{\partial \sigma}=2(\mu+\sigma\epsilon)\epsilon
+$$
+</div>
+<p>它们确实包含随机的 $\epsilon$。但取期望后：</p>
+<div class="formula">
+$$
+E[2(\mu+\sigma\epsilon)]=2\mu
+$$
+</div>
+<div class="formula">
+$$
+E[2(\mu+\sigma\epsilon)\epsilon]=2\sigma
+$$
+</div>
+<p>这正好是：</p>
+<div class="formula">
+$$
+E[z^2]=\mu^2+\sigma^2
+$$
+</div>
+<p>的真实梯度：</p>
+<div class="formula">
+$$
+\frac{\partial}{\partial\mu}=2\mu,\qquad
+\frac{\partial}{\partial\sigma}=2\sigma
+$$
+</div>
+<p>所以重参数化后的梯度虽然每次随机，但在统计意义上是正确的。</p>
+</details>
+</section>
+<section class="section" id="gen-vae-generation"><h2>6. VAE 的生成能力与局限 <span class="tag know">了解</span></h2>
+<p>VAE 的生成流程是：</p>
+<div class="formula">
+$$
+z\sim N(0,I)
+$$
+</div>
+<div class="formula">
+$$
+x=\text{Decoder}(z)
+$$
+</div>
+<p>它能生成训练集中没见过的新图像，是因为训练时 Decoder 已经学习了公共隐空间到图像空间的映射。</p>
+<p>但普通 VAE 生成不可控。你不知道哪个 <code>z</code> 精确对应“白猫”“汽车”“某种风格”。如果要控制生成，需要额外条件，例如类别标签或文本：</p>
+<div class="formula">
+$$
+p_\theta(x|z,c)
+$$
+</div>
+<p>其中 <code>c</code> 是条件信息。</p>
+<p>VAE 另一个常见缺点是图像容易模糊。原因是像素级 MSE 倾向于平均多种可能结果。比如两张语义上都是猫的图，像素位置可能差很多，MSE 会鼓励模型生成平滑的折中结果。</p>
+<p>这也是课件随后引出 GAN 的原因：GAN 不只看像素误差，而是通过判别器学习“像不像真实图像”的分布级信号。</p>
+</section>
+<section class="section" id="gen-gan"><h2>7. GAN 基本架构 <span class="tag know">了解</span></h2>
+<p>GAN 包含两个网络：</p>
+<ul>
+<li>生成器 <code>G</code>：输入随机噪声 <code>z</code>，输出假图像 <code>G(z)</code>。</li>
+<li>判别器 <code>D</code>：输入一张图，判断它是真图还是假图。</li>
+</ul>
+<p>训练目标是对抗博弈：</p>
+<div class="formula">
+$$
+\min_G\max_D V(D,G)
+$$
+</div>
+<p>经典损失写作：</p>
+<div class="formula">
+$$
+V(D,G)
+=
+E_{x\sim p_{\text{data}}}[\log D(x)]
++
+E_{z\sim p(z)}[\log(1-D(G(z)))]
+$$
+</div>
+<p>判别器希望：</p>
+<div class="formula">
+$$
+D(x)\rightarrow 1,\qquad D(G(z))\rightarrow 0
+$$
+</div>
+<p>生成器希望：</p>
+<div class="formula">
+$$
+D(G(z))\rightarrow 1
+$$
+</div>
+<p>训练时交替优化：</p>
+<ul>
+<li>固定 <code>G</code>，训练 <code>D</code> 区分真图和假图。</li>
+<li>固定 <code>D</code>，训练 <code>G</code> 让假图骗过 <code>D</code>。</li>
+</ul>
+<p>当生成分布和真实分布完全一致时：</p>
+<div class="formula">
+$$
+p_G(x)=p_{\text{data}}(x)
+$$
+</div>
+<p>此时判别器无法区分真假：</p>
+<div class="formula">
+$$
+D(x)=\frac{1}{2}
+$$
+</div>
+<p>课件里还提到理论上最优判别器会把生成器目标转化为真实分布与生成分布之间的 JS 散度。复习时知道结论即可：GAN 的目标是让生成分布逼近真实图像分布。</p>
+</section>
+<section class="section" id="gen-diffusion-overview"><h2>8. Diffusion Model 总览 <span class="tag important">重点</span></h2>
+<p>扩散模型的核心是两条过程：</p>
+<ul>
+<li>前向过程：从真实图像开始，逐步加噪，最后接近纯高斯噪声。</li>
+<li>反向过程：从纯噪声开始，逐步去噪，最后生成图像。</li>
+</ul>
+<p>直观流程：</p>
+<div class="formula">
+$$
+x_0\rightarrow x_1\rightarrow x_2\rightarrow \cdots \rightarrow x_T
+$$
+</div>
+<p>其中 <code>x_0</code> 是真实图像，<code>x_T</code> 接近纯噪声。</p>
+<p>生成时反过来：</p>
+<div class="formula">
+$$
+x_T\rightarrow x_{T-1}\rightarrow \cdots \rightarrow x_0
+$$
+</div>
+<p>前向加噪可以直接人为定义，因为我们知道怎么加高斯噪声。难点是反向去噪：模型要学会每一步该去掉什么噪声。</p>
+<p>所以 Diffusion 的本质可以记成：</p>
+<blockquote>训练一个噪声预测网络，让它在任意时间步 <code>t</code> 看见含噪图 <code>x_t</code> 后，预测当初加进去的噪声。</blockquote>
+</section>
+<section class="section" id="gen-diffusion-denoiser"><h2>9. Diffusion 去噪模型设计 <span class="tag important">重点</span></h2>
+<p>课件给出两个思路。</p>
+<p>思路一：直接预测加噪前图像。</p>
+<div class="formula">
+$$
+x_t\rightarrow \text{Model}\rightarrow x_{t-1}\ \text{或}\ x_0
+$$
+</div>
+<p>问题是图像分布复杂，猫、车、人脸、风景差异很大，直接预测干净图像学习难度高。</p>
+<p>思路二：预测噪声。</p>
+<div class="formula">
+$$
+x_t,t\rightarrow \epsilon_\theta(x_t,t)
+$$
+</div>
+<p>然后用预测噪声去还原更干净的图像。</p>
+<p>为什么预测噪声更容易？因为无论原图是什么，加入的噪声都来自高斯分布：</p>
+<div class="formula">
+$$
+\epsilon\sim N(0,I)
+$$
+</div>
+<p>噪声的统计规律比图像本身简单，模型更容易学习。</p>
+</section>
+<section class="section" id="gen-diffusion-training"><h2>10. Diffusion 训练流程 <span class="tag important">重点</span></h2>
+<p>朴素做法是从 <code>x_0</code> 开始一步步加噪，同时训练模型预测每一步噪声。但这样有两个问题：</p>
+<ul>
+<li>训练顺序固定，前期只学低噪声，后期只学高噪声，优化不稳定。</li>
+<li>如果每次随机时间步 <code>t</code> 都要真的加噪 <code>t</code> 次，计算很浪费。</li>
+</ul>
+<p>改进做法是：随机采样时间步 <code>t</code>，并用闭式公式一步得到 <code>x_t</code>。</p>
+<p>常见前向加噪公式是：</p>
+<div class="formula">
+$$
+x_t=\sqrt{\bar{\alpha}_t}x_0+\sqrt{1-\bar{\alpha}_t}\epsilon
+$$
+</div>
+<p>其中：</p>
+<ul>
+<li><code>x_0</code>：干净图像。</li>
+<li><code>t</code>：随机采样的时间步。</li>
+<li>$\epsilon\sim N(0,I)$：真实加入的噪声。</li>
+<li>$\bar{\alpha}_t$：由噪声强度累计得到的系数，控制第 <code>t</code> 步保留多少原图信息。</li>
+</ul>
+<p>训练时，模型输入：</p>
+<div class="formula">
+$$
+(x_t,t)
+$$
+</div>
+<p>模型输出：</p>
+<div class="formula">
+$$
+\epsilon_\theta(x_t,t)
+$$
+</div>
+<p>损失函数是预测噪声和真实噪声的 L2 损失：</p>
+<div class="formula">
+$$
+L_{\text{diffusion}}
+=
+\|\epsilon-\epsilon_\theta(x_t,t)\|^2
+$$
+</div>
+<h3>训练流程一页版</h3>
+<ol>
+<li>从训练集中随机取一张图 <code>x_0</code>。</li>
+<li>随机采样时间步 <code>t</code>。</li>
+<li>随机采样高斯噪声 $\epsilon$。</li>
+<li>用公式一步构造含噪图 <code>x_t</code>。</li>
+<li>让模型根据 <code>x_t</code> 和 <code>t</code> 预测噪声。</li>
+<li>用 $\|\epsilon-\epsilon_\theta(x_t,t)\|^2$ 更新模型。</li>
+</ol>
+<details>
+<summary>展开：为什么可以一步得到任意时间步的含噪图</summary>
+<p>每一步加噪可写成：</p>
+<div class="formula">
+$$
+x_t=\sqrt{\alpha_t}x_{t-1}+\sqrt{1-\alpha_t}\epsilon_t
+$$
+</div>
+<p>不断递归展开，可以得到：</p>
+<div class="formula">
+$$
+x_t=\sqrt{\bar{\alpha}_t}x_0+\sqrt{1-\bar{\alpha}_t}\epsilon
+$$
+</div>
+<p>其中：</p>
+<div class="formula">
+$$
+\bar{\alpha}_t=\prod_{s=1}^{t}\alpha_s
+$$
+</div>
+<p>关键点是：多个独立高斯噪声的线性组合仍然是高斯噪声，所以可以把多步噪声合并成一个新的 $\epsilon\sim N(0,I)$。</p>
+<p>这就是课件里“多步加噪变成单步加噪即可得到训练数据”的数学原因。</p>
+</details>
+</section>
+<section class="section" id="gen-diffusion-inference"><h2>11. Diffusion 推理与条件生成 <span class="tag important">重点</span></h2>
+<p>推理阶段从纯噪声开始：</p>
+<div class="formula">
+$$
+x_T\sim N(0,I)
+$$
+</div>
+<p>然后循环执行：</p>
+<div class="formula">
+$$
+x_t\rightarrow x_{t-1}
+$$
+</div>
+<p>每一步模型预测当前噪声：</p>
+<div class="formula">
+$$
+\epsilon_\theta(x_t,t)
+$$
+</div>
+<p>再根据预测结果去掉一部分噪声。课件还提到，去噪后通常会加入一定随机噪声，这样可以增加生成多样性，也能缓解误差累积。</p>
+<h3>为什么普通扩散生成不可控</h3>
+<p>如果输入只有随机噪声：</p>
+<div class="formula">
+$$
+x_T\sim N(0,I)
+$$
+</div>
+<p>模型只能随机生成图像。它不知道你想要猫、车还是风景。</p>
+<p>要可控生成，就要加入条件：</p>
+<div class="formula">
+$$
+\epsilon_\theta(x_t,t,c)
+$$
+</div>
+<p>其中 <code>c</code> 可以是类别标签、文本向量、边缘图、深度图等。</p>
+<p>文生图时，文本不是直接变成一个 VAE 向量，而是作为条件参与每一步去噪：</p>
+<div class="formula">
+$$
+\text{prompt}\rightarrow \text{text encoder}\rightarrow c
+$$
+</div>
+<div class="formula">
+$$
+\epsilon_\theta(x_t,t,c)
+$$
+</div>
+<p>也就是说：</p>
+<blockquote>文本指导模型每一步“应该往哪个方向去噪”，最后随机噪声逐渐变成符合文字描述的图像。</blockquote>
+<p>这正好回答之前那个疑问：模型不是先知道某个隐空间向量精确对应“白猫”，而是在大量图文配对训练中学会“文本条件如何改变去噪方向”。</p>
+</section>
+<section class="section" id="gen-latent-diffusion"><h2>12. 隐空间扩散与 Stable Diffusion <span class="tag important">重点/了解</span></h2>
+<p>普通扩散如果直接在像素空间做去噪，计算量很大。例如 <code>512 x 512</code> 图像有 262,144 个像素位置，还要多步迭代去噪，速度和显存压力都很高。</p>
+<p>Stable Diffusion 使用 Latent Diffusion 的思想：先用 VAE 把图像压到低维隐空间，再在隐空间里做扩散。</p>
+<p>大致流程：</p>
+<div class="formula">
+$$
+x\rightarrow \text{VAE Encoder}\rightarrow z
+$$
+</div>
+<p>在训练扩散模型时，对隐变量 <code>z</code> 加噪、预测噪声、计算损失。</p>
+<p>生成时：</p>
+<div class="formula">
+$$
+z_T\sim N(0,I)
+$$
+</div>
+<div class="formula">
+$$
+\text{text prompt}\rightarrow \text{text encoder}\rightarrow c
+$$
+</div>
+<div class="formula">
+$$
+z_T\rightarrow z_{T-1}\rightarrow\cdots\rightarrow z_0
+$$
+</div>
+<p>最后：</p>
+<div class="formula">
+$$
+z_0\rightarrow \text{VAE Decoder}\rightarrow x
+$$
+</div>
+<p>所以 Stable Diffusion 里，VAE 主要负责：</p>
+<div class="formula">
+$$
+\text{像素图像}\leftrightarrow \text{压缩隐空间}
+$$
+</div>
+<p>真正决定“根据文字生成什么”的，是文本编码器和条件去噪网络。</p>
+<p>这也解释了之前的问题：</p>
+<ul>
+<li>普通 VAE：从 <code>N(0,I)</code> 抽一个 <code>z</code>，Decoder 随机生成，不好控制。</li>
+<li>文生图扩散：从随机隐空间噪声开始，文本条件持续指导去噪，最终得到符合 prompt 的隐变量，再交给 VAE Decoder 解码。</li>
+</ul>
+</section>
+<section class="section" id="gen-flow-matching"><h2>13. Flow Matching <span class="tag pass">简单带过</span></h2>
+<p>Flow Matching 也是从噪声生成图像，但它强调学习一条从噪声分布到数据分布的连续路径。</p>
+<p>课件中的直观说法是：</p>
+<div class="formula">
+$$
+x_0\rightarrow x_{0.25}\rightarrow x_{0.5}\rightarrow x_{0.75}\rightarrow x_1
+$$
+</div>
+<p>其中 <code>x_0</code> 来自噪声分布，<code>x_1</code> 来自图像分布。模型学习的是沿着路径把噪声搬运到图像的速度场或方向。</p>
+<p>只需要记住：</p>
+<ul>
+<li>Diffusion：常理解为多步加噪、再多步去噪。</li>
+<li>Flow Matching：直接学习从噪声到数据的连续传输路径。</li>
+<li>现在一些前沿生成模型会使用 Flow Matching 或相关思想。</li>
+</ul>
+</section>
+<section class="section" id="gen-summary"><h2>14. 一页速记</h2>
+<table>
+<thead><tr>
+<th>模型</th>
+<th>核心思想</th>
+<th>重点记忆</th>
+</tr></thead><tbody>
+<tr>
+<td>VAE</td>
+<td>Encoder 输出分布，Decoder 从隐变量生成图像</td>
+<td><code>Loss = 重建损失 + KL 正则项</code>；`q(z</td>
+<td>x)<code> 是训练时针对当前样本的近似后验；生成时从 </code>N(0,I)` 采样</td>
+</tr>
+<tr>
+<td>GAN</td>
+<td>生成器和判别器对抗训练</td>
+<td><code>G</code> 想骗过 <code>D</code>，<code>D</code> 想区分真假；交替优化；理论目标是让 <code>p_G</code> 逼近 <code>p_data</code></td>
+</tr>
+<tr>
+<td>Diffusion</td>
+<td>先把图像加噪成高斯噪声，再学习反向去噪</td>
+<td>模型主要预测噪声；训练随机采样时间步；损失是预测噪声和真实噪声的 L2</td>
+</tr>
+<tr>
+<td>Stable Diffusion</td>
+<td>在 VAE 隐空间中做条件扩散</td>
+<td>文本不是直接变成图像向量，而是指导每一步去噪；最后用 VAE Decoder 解码</td>
+</tr>
+<tr>
+<td>Flow Matching</td>
+<td>学习从噪声到数据的传输路径</td>
+<td>知道概念即可：从噪声分布沿连续路径走向图像分布</td>
+</tr>
+</tbody></table>
+<p>最容易混的几个点：</p>
+<ul>
+<li>$q_\phi(z|x)$ 是 Encoder 给当前图片预测的隐变量分布，不是生成时最终使用的分布。</li>
+<li>生成时不用 Encoder，是因为训练时 KL 已经把各样本的隐变量分布规整到公共 <code>N(0,I)</code> 隐空间。</li>
+<li>KL 散度才是 VAE 的正则项；重建损失负责生成精度。</li>
+<li>重参数化后 $\epsilon$ 虽然随机，但一次前向中可当常数；梯度是随机估计，可以用于 SGD。</li>
+<li>Diffusion 文生图不是“文字直接找到某个 z”，而是“文字条件指导随机噪声逐步去噪成目标图像”。</li>
+</ul>
+</section>
+
+      <div class="course-divider" id="large-language-models-course">大语言模型</div>
+<section class="hero" id="llm-overview"><h1>大语言模型复习笔记</h1>
+<blockquote>依据第十章《语言模型》、第十一章《大语言模型架构》、第十二章《检索增强生成》课件，结合重点截图以及本轮关于 Encoder-Decoder 注意力、交叉注意力和“解码器对编码器的完全注意力”的问答整理。红色重点详写；黑色内容以理解主线为主；课件中出现但重点图没有列出的内容简单带过。</blockquote>
+</section>
+<section class="section" id="llm-priority"><h2>0. 复习优先级</h2>
+<table>
+<thead><tr>
+<th>优先级</th>
+<th>内容</th>
+<th>复习目标</th>
+</tr></thead><tbody>
+<tr>
+<td>重点</td>
+<td>大语言模型架构：Encoder-only、Decoder-only、Encoder-Decoder；检索增强生成：幻觉、RAG 架构、编码器、何时增强、何处增强、降本增效</td>
+<td>能画出三类架构的注意力矩阵，讲清三种注意力的 Query、Key、Value 来源；能说明 RAG 为什么能缓解幻觉、完整流程是什么、检索器和生成器如何配合</td>
+</tr>
+<tr>
+<td>了解</td>
+<td>基于统计的语言模型、语言模型采样、语言模型预训练、后训练、参数高效微调</td>
+<td>知道 N-gram、曝光偏差、Top-k/Top-p、Scaling Law、下一词预测、RLHF/GRPO、Adapter/LoRA 的核心思想</td>
+</tr>
+<tr>
+<td>简单带过</td>
+<td>BERT/RoBERTa/ALBERT、BART/T5、GPT/LLaMA 演进、RAG 应用落地</td>
+<td>记代表模型、适合任务、为什么这一类模型出现即可</td>
+</tr>
+</tbody></table>
+</section>
+<section class="section" id="llm-llm-mainline"><h2>1. 大语言模型主线：从“预测下一个词”到“会查资料再回答” <span class="tag know">了解</span></h2>
+<p>语言模型的基本目标是给一个词序列分配概率，或者根据前文预测下一个 token：</p>
+<div class="formula">
+$$
+p(x_1,x_2,\ldots,x_T)=\prod_{t=1}^{T}p(x_t|x_{&lt;t})
+$$
+</div>
+<p>早期的统计语言模型用 N-gram 估计短窗口里的词序列概率；RNN 和 Transformer 则把上下文表示成向量，让模型能学习更复杂的语义关系。大语言模型的核心变化不是目标突然变了，而是模型规模、数据规模、训练方式、推理方式和外部工具能力一起变强了。</p>
+<p>可以把本章内容串成一条线：</p>
+<ol>
+<li>先学会语言建模：根据上下文预测 token。</li>
+<li>再用 Transformer 扩展上下文建模能力。</li>
+<li>再用大规模预训练让模型吸收通用语言知识。</li>
+<li>再用后训练让模型更会按人类意图说话。</li>
+<li>最后用 RAG 等外部增强方法，让模型在参数知识之外查资料、降幻觉、降成本。</li>
+</ol>
+</section>
+<section class="section" id="llm-n-gram"><h2>2. 基于统计的语言模型：N-gram <span class="tag know">了解</span></h2>
+<p>N-gram 指长度为 <code>n</code> 的连续词序列。它的基本想法是：当前词的概率不依赖完整历史，只依赖前面 <code>n-1</code> 个词。</p>
+<p>例如：</p>
+<ul>
+<li>Unigram：不看上下文，只看一个词本身的出现频率。</li>
+<li>Bigram：看前一个词。</li>
+<li>Trigram：看前两个词。</li>
+</ul>
+<p>N-gram 的优点是直观、可统计、可解释，曾经广泛用于输入法、拼写纠错、机器翻译等任务。缺点也很明显：窗口有限，难以捕捉长程依赖；按字面匹配，不能很好处理语义相近但表面不同的表达；<code>n</code> 变大后参数量指数增长，而且容易出现没见过的组合导致零概率。</p>
+<details>
+<summary>展开：N-gram 概率公式</summary>
+<p>完整语言模型希望估计：</p>
+<div class="formula">
+$$
+p(w_1,w_2,\ldots,w_T)=\prod_{t=1}^{T}p(w_t|w_1,\ldots,w_{t-1})
+$$
+</div>
+<p>N-gram 做了马尔可夫假设，只保留最近的 <code>n-1</code> 个词：</p>
+<div class="formula">
+$$
+p(w_t|w_1,\ldots,w_{t-1})\approx p(w_t|w_{t-n+1},\ldots,w_{t-1})
+$$
+</div>
+<p>用语料频率估计时：</p>
+<div class="formula">
+$$
+p(w_t|w_{t-n+1},\ldots,w_{t-1})
+=
+\frac{C(w_{t-n+1},\ldots,w_t)}
+{C(w_{t-n+1},\ldots,w_{t-1})}
+$$
+</div>
+<p>这里 $C(\cdot)$ 表示某个词序列在语料中出现的次数。<code>n</code> 太小，上下文不够；<code>n</code> 太大，很多组合没见过，泛化变差，计算和存储也变重。</p>
+</details>
+</section>
+<section class="section" id="llm-sampling"><h2>3. 语言模型采样：模型给概率，人类定策略 <span class="tag know">了解</span></h2>
+<p>语言模型每一步输出的是整个词表上的概率分布，不是直接输出唯一答案。采样策略决定“从概率分布里选哪个 token”。</p>
+<table>
+<thead><tr>
+<th>方法</th>
+<th>做法</th>
+<th>特点</th>
+</tr></thead><tbody>
+<tr>
+<td>贪心搜索</td>
+<td>每步都选概率最大的 token</td>
+<td>稳定但容易平庸、重复</td>
+</tr>
+<tr>
+<td>Beam Search</td>
+<td>保留多个高概率候选序列</td>
+<td>适合翻译等目标明确任务，但开放式生成容易“废话文学”</td>
+</tr>
+<tr>
+<td>Top-k</td>
+<td>每步只在概率最高的 <code>k</code> 个 token 中采样</td>
+<td>增加多样性，但固定 <code>k</code> 不够自适应</td>
+</tr>
+<tr>
+<td>Top-p</td>
+<td>选取累计概率达到阈值 <code>p</code> 的候选集合</td>
+<td>候选集合大小随分布变化，更灵活</td>
+</tr>
+<tr>
+<td>Temperature</td>
+<td>调整概率分布的尖锐程度</td>
+<td>温度低更保守，温度高更多样也更冒险</td>
+</tr>
+</tbody></table>
+<p>Top-k 和 Top-p 都是在“候选词集合”上做文章；Temperature 是在“概率分布形状”上做文章。实际生成常常组合使用，比如 <code>top_p=0.9</code> 加一个适中的 temperature。</p>
+<details>
+<summary>展开：Temperature 怎么改变随机性</summary>
+<p>模型输出 logits $z_i$ 后，原本概率是：</p>
+<div class="formula">
+$$
+p_i=\frac{\exp(z_i)}{\sum_j\exp(z_j)}
+$$
+</div>
+<p>加入温度 $T$ 后：</p>
+<div class="formula">
+$$
+p_i=\frac{\exp(z_i/T)}{\sum_j\exp(z_j/T)}
+$$
+</div>
+<p>当 $T<1$，大的 logit 会被进一步放大，分布更尖，模型更保守。</p>
+<p>当 $T>1$，不同 token 的概率差距被拉平，分布更平，生成更随机。</p>
+</details>
+</section>
+<section class="section" id="llm-pretraining"><h2>4. 预训练、曝光偏差与扩展法则 <span class="tag know">了解</span></h2>
+<p>大语言模型的预训练通常使用自监督任务。Decoder-only 模型最典型的是下一词预测：</p>
+<div class="formula">
+$$
+\max_\theta \sum_t \log p_\theta(x_t|x_{&lt;t})
+$$
+</div>
+<p>训练时常用 Teacher Forcing：模型预测第 <code>t</code> 个 token 时，前面喂给它的是真实 token，而不是模型自己上一步生成的 token。这样训练稳定、并行友好，但会带来曝光偏差。</p>
+<p>曝光偏差的意思是：训练时模型总是在“标准答案前缀”上学习，推理时却必须接着“自己生成的前缀”往下走。一旦前面生成错了，后面会在错误上下文里继续生成，错误可能累积，幻觉风险也会上升。</p>
+<p>扩展法则 Scaling Law 讲的是模型性能与参数量、数据量、计算量之间存在经验规律。大模型能力提升的重要原因之一，是模型规模和训练数据规模一起扩大；但课件也强调，规模不是唯一答案，数据质量、训练范式和后训练同样关键。</p>
+<details>
+<summary>展开：语言模型损失函数</summary>
+<p>对 Decoder-only 语言模型，训练样本是 token 序列 $x_1,\ldots,x_T$。模型希望最大化真实下一个 token 的概率：</p>
+<div class="formula">
+$$
+\max_\theta \sum_{t=1}^{T}\log p_\theta(x_t|x_{&lt;t})
+$$
+</div>
+<p>实现中通常最小化负对数似然，也就是交叉熵损失：</p>
+<div class="formula">
+$$
+L(\theta)=-\sum_{t=1}^{T}\log p_\theta(x_t|x_{&lt;t})
+$$
+</div>
+<p>这就是“接龙能力”的数学形式。模型不是直接被训练成“懂道理”，而是通过海量文本接龙学到词法、语法、事实、风格和某些推理模式。</p>
+</details>
+</section>
+<section class="section" id="llm-transformer"><h2>5. Transformer 的两类核心模块 <span class="tag know">了解</span></h2>
+<p>Transformer 主要由注意力模块和全连接前馈模块组成。</p>
+<ul>
+<li>注意力模块负责“当前 token 应该参考哪些上下文 token”。</li>
+<li>前馈网络 FFN/MLP 占据大量参数，常被理解为模型存储和变换知识的重要位置。</li>
+<li>残差连接让深层网络更容易训练。</li>
+<li>层归一化让训练更稳定。</li>
+</ul>
+<p>注意力的直觉是加权平均：每个 token 先对其他 token 打分，再按照权重汇总信息。</p>
+<details>
+<summary>展开：Scaled Dot-Product Attention</summary>
+<p>注意力有三个角色：</p>
+<ul>
+<li>Query：我现在要问什么。</li>
+<li>Key：每个位置有什么索引特征。</li>
+<li>Value：每个位置真正要被取走的信息。</li>
+</ul>
+<p>公式是：</p>
+<div class="formula">
+$$
+\operatorname{Attention}(Q,K,V)
+=
+\operatorname{softmax}\left(\frac{QK^T}{\sqrt{d_k}}\right)V
+$$
+</div>
+<p>$QK^T$ 计算“每个 Query 和每个 Key 的相关性”；除以 $\sqrt{d_k}$ 是为了防止维度变大后点积过大；softmax 把相关性变成权重；最后乘 $V$ 得到加权汇总后的表示。</p>
+<p>自注意力和交叉注意力的公式一样，区别在于 $Q,K,V$ 来自哪里。</p>
+</details>
+</section>
+<section class="section" id="llm-architectures"><h2>6. 三种大语言模型架构总览 <span class="tag important">重点</span></h2>
+<p>Transformer 衍生出三种主流架构：Encoder-only、Encoder-Decoder、Decoder-only。它们最大的差别不是“名字”，而是谁负责哪些 token、注意力矩阵允许看哪里。</p>
+<table>
+<thead><tr>
+<th>架构</th>
+<th>负责的 token</th>
+<th>注意力特点</th>
+<th>代表模型</th>
+<th>更适合</th>
+</tr></thead><tbody>
+<tr>
+<td>Encoder-only</td>
+<td>输入 token</td>
+<td>双向完全自注意力</td>
+<td>BERT、RoBERTa、ALBERT</td>
+<td>理解、分类、匹配、检索编码</td>
+</tr>
+<tr>
+<td>Encoder-Decoder</td>
+<td>Encoder 负责输入 token，Decoder 负责输出 token</td>
+<td>输入内部完全注意力，输出内部下三角注意力，输出对输入做交叉注意力</td>
+<td>BART、T5</td>
+<td>翻译、摘要、结构化生成</td>
+</tr>
+<tr>
+<td>Decoder-only</td>
+<td>把提示词和生成内容都放在同一条序列里</td>
+<td>下三角因果自注意力</td>
+<td>GPT、LLaMA、Qwen 等</td>
+<td>开放式生成、对话、通用助手</td>
+</tr>
+</tbody></table>
+<p>你前面问到的关键点非常重要：在 Encoder-Decoder 中，Encoder 和 Decoder 负责的 token 通常不是同一批。</p>
+<p>例如翻译：</p>
+<pre><code>输入：I love you        &lt;- Encoder 处理这些 token
+输出：我 爱 你          &lt;- Decoder 处理这些 token</code></pre>
+<p>所以图里的注意力矩阵不是同一批 token 内部的一个方块，而是把“输入序列 token”和“输出序列 token”放在一起看。</p>
+</section>
+<section class="section" id="llm-encoder-only"><h2>7. Encoder-only：输入 token 之间充分互相理解 <span class="tag important">重点</span></h2>
+<p>Encoder-only 只使用 Transformer 的编码器部分。它的核心是双向自注意力：每个输入 token 都可以看输入序列中的所有位置。</p>
+<p>例如句子：</p>
+<pre><code>我 不 喜欢 这 部 电影</code></pre>
+<p>处理“喜欢”时，模型既能看左边的“我 不”，也能看右边的“这 部 电影”。所以它很适合理解类任务，比如情感分类、文本匹配、实体识别、检索向量编码等。</p>
+<p>但 Encoder-only 没有天然的自回归解码器，因此不擅长直接一个 token 一个 token 生成长文本。BERT 类模型可以做填空，但不是最自然的开放式生成架构。</p>
+</section>
+<section class="section" id="llm-decoder-only"><h2>8. Decoder-only：只看过去，边生成边扩展上下文 <span class="tag important">重点</span></h2>
+<p>Decoder-only 只使用 Transformer 的解码器部分，并省略原始 Encoder-Decoder 解码器里的交叉注意力子模块。它的核心是因果自注意力，也叫下三角注意力。</p>
+<p>对第 <code>t</code> 个 token 来说，它只能看 <code>1</code> 到 <code>t</code> 的 token，不能看未来 token。这样才符合生成过程：</p>
+<pre><code>第 1 步：生成 我
+第 2 步：看到 我，再生成 爱
+第 3 步：看到 我 爱，再生成 你</code></pre>
+<p>现代对话模型通常把输入提示词和模型回复拼成一条长序列：</p>
+<pre><code>用户问题 token + 助手回答 token</code></pre>
+<p>然后用同一套下三角注意力建模。提示词在回答之前，所以回答 token 可以看见提示词；提示词 token 不能看见未来回答 token。这也是为什么 Decoder-only 可以在没有独立 Encoder 的情况下做问答和对话。</p>
+<p>Decoder-only 的优点是架构简单、扩展性强、非常适合大规模预训练和开放式生成。局限是没有 Encoder 那种对输入的双向深度编码，在某些复杂输入理解或严格源到目标转换任务上不一定最经济。</p>
+</section>
+<section class="section" id="llm-encoder-decoder"><h2>9. Encoder-Decoder：输入理解和输出生成分工 <span class="tag important">重点</span></h2>
+<p>Encoder-Decoder 同时使用编码器和解码器。它的分工最清楚：</p>
+<ul>
+<li>Encoder：负责输入序列 token，目标是把输入整体理解成上下文表示。</li>
+<li>Decoder：负责输出序列 token，目标是根据已经生成的输出和 Encoder 的输入表示，逐步生成下一个 token。</li>
+</ul>
+<p>以翻译为例：</p>
+<pre><code>Encoder 看：I love you
+Decoder 生成：我 -&gt; 爱 -&gt; 你</code></pre>
+<p>这里 Decoder 每一步手里有两类信息：</p>
+<ol>
+<li>我已经生成了什么。</li>
+<li>输入句子里哪些部分和当前要生成的词有关。</li>
+</ol>
+<p>第一类来自 Decoder 内部的 masked self-attention。第二类来自 cross-attention。</p>
+</section>
+<section class="section" id="llm-attention-types"><h2>10. 三种注意力：完全、下三角、交叉 <span class="tag important">重点</span></h2>
+<p>课件图中 Encoder-Decoder 的三种注意力可以这样记：</p>
+<table>
+<thead><tr>
+<th>模块</th>
+<th>Query 来自</th>
+<th>Key/Value 来自</th>
+<th>能看哪里</th>
+<th>作用</th>
+</tr></thead><tbody>
+<tr>
+<td>Encoder 自注意力</td>
+<td>Encoder token</td>
+<td>Encoder token</td>
+<td>全部输入 token</td>
+<td>输入内部充分理解</td>
+</tr>
+<tr>
+<td>Decoder 自注意力</td>
+<td>Decoder token</td>
+<td>Decoder token</td>
+<td>已生成的输出 token</td>
+<td>保证自回归生成，不偷看未来</td>
+</tr>
+<tr>
+<td>交叉注意力</td>
+<td>Decoder token</td>
+<td>Encoder token</td>
+<td>全部输入 token</td>
+<td>生成当前输出时回看输入</td>
+</tr>
+</tbody></table>
+<p>“完全注意力”不是说注意力权重平均，也不是说每个 token 一定真的强烈关注所有位置。它的意思是没有 mask 限制，理论上可以访问所有对应位置。</p>
+<h3>10.1 Encoder 内部的完全自注意力</h3>
+<p>Encoder 处理的是输入 token。输入句子在编码时已经完整给定，所以每个输入 token 可以看见所有输入 token。</p>
+<pre><code>输入：I love you</code></pre>
+<p>编码 <code>love</code> 时可以同时看 <code>I</code> 和 <code>you</code>。这对应图里的蓝色完整方块。</p>
+<h3>10.2 Decoder 内部的下三角自注意力</h3>
+<p>Decoder 处理的是输出 token。输出是一步步生成的，所以第 <code>t</code> 个输出 token 只能看前面已经生成的 token，不能看未来。</p>
+<pre><code>输出：我 爱 你</code></pre>
+<p>生成“爱”时可以看“我”，不能看未来的“你”。这对应图里的绿色下三角。</p>
+<h3>10.3 交叉注意力：Decoder 查询 Encoder</h3>
+<p>交叉注意力发生在 Decoder 里面，但它看的对象是 Encoder 的输出。</p>
+<p>最关键的一句：</p>
+<blockquote>交叉注意力中，Query 来自 Decoder，Key 和 Value 来自 Encoder。</blockquote>
+<p>当 Decoder 要生成“我”时，它会拿当前 Decoder 状态作为 Query，去和 Encoder 中 <code>I love you</code> 的每个位置做匹配。它可能发现 <code>I</code> 最相关，于是把 <code>I</code> 对应的 Value 更多地汇总回来。</p>
+<p>当 Decoder 要生成“爱”时，它可能更关注 <code>love</code>。</p>
+<p>当 Decoder 要生成“你”时，它可能更关注 <code>you</code>。</p>
+<p>所以“解码器对编码器的完全注意力”的准确理解是：</p>
+<blockquote>Decoder 的每一个输出位置，都可以访问 Encoder 的全部输入位置。</blockquote>
+<p>它不是说 Decoder 和 Encoder 负责同一批 token。恰恰相反，它们负责不同 token：Encoder 管输入，Decoder 管输出。交叉注意力就是 Decoder 在生成自己的输出 token 时，向 Encoder 的输入表示发起查询。</p>
+<details>
+<summary>展开：用矩阵看三种注意力</summary>
+<p>假设输入长度为 3，输出长度为 3。把行理解成 Query 的位置，把列理解成 Key/Value 的位置：</p>
+<div class="formula">
+$$
+\begin{array}{c|cc}
+ &amp; \text{Encoder tokens} &amp; \text{Decoder tokens} \\\hline
+\text{Encoder queries} &amp; \text{Encoder 完全自注意力} &amp; \text{通常没有这一块} \\
+\text{Decoder queries} &amp; \text{交叉注意力} &amp; \text{Decoder 下三角自注意力}
+\end{array}
+$$
+</div>
+<p>Encoder 自注意力：</p>
+<div class="formula">
+$$
+Q=X_{\text{enc}}W_Q,\quad K=X_{\text{enc}}W_K,\quad V=X_{\text{enc}}W_V
+$$
+</div>
+<p>Decoder 自注意力：</p>
+<div class="formula">
+$$
+Q=Y_{\text{dec}}W_Q,\quad K=Y_{\text{dec}}W_K,\quad V=Y_{\text{dec}}W_V
+$$
+</div>
+<p>交叉注意力：</p>
+<div class="formula">
+$$
+Q=Y_{\text{dec}}W_Q,\quad K=H_{\text{enc}}W_K,\quad V=H_{\text{enc}}W_V
+$$
+</div>
+<p>其中 $H_{\text{enc}}$ 是 Encoder 输出的输入序列表示，$Y_{\text{dec}}$ 是 Decoder 当前层里的输出序列表示。交叉注意力的本质就是“输出位置向输入位置提问”。</p>
+</details>
+</section>
+<section class="section" id="llm-post-training"><h2>11. 后训练：让会接龙的模型更会说话 <span class="tag know">了解</span></h2>
+<p>只做下一词预测，模型学到的是“文本接龙”。这不等于它会遵循指令、拒绝不合适请求、给出有帮助且诚实的回答。</p>
+<p>后训练一般包括：</p>
+<ul>
+<li>指令微调 SFT：用“用户指令 - 优质回答”数据做监督学习，让模型学会对话格式和任务执行方式。</li>
+<li>价值对齐：让模型更符合有用、诚实、无害的目标。</li>
+<li>RLHF：用人类偏好训练奖励模型，再用强化学习优化语言模型。</li>
+<li>GRPO 等方法：通过组内相对奖励等方式强化模型的推理和答案质量。</li>
+</ul>
+<p>一句话区分：预训练让模型“有知识、会接龙”；指令微调让模型“会按要求回答”；偏好优化和强化学习让模型“更符合人类偏好和任务目标”。</p>
+<details>
+<summary>展开：RLHF 和 GRPO 的直觉</summary>
+<p>RLHF 常见流程：</p>
+<ol>
+<li>收集人类偏好数据：同一个问题给多个回答，人类排序。</li>
+<li>训练奖励模型：让奖励模型学会判断哪个回答更好。</li>
+<li>强化学习优化语言模型：让模型生成更高奖励的回答，同时不要偏离原模型太远。</li>
+</ol>
+<p>可以抽象成：</p>
+<div class="formula">
+$$
+\max_\theta E_{y\sim \pi_\theta(\cdot|x)}[R(x,y)]
+-\beta KL(\pi_\theta || \pi_{\text{ref}})
+$$
+</div>
+<p>其中 $R(x,y)$ 是奖励，$KL$ 项用于限制模型不要为了追奖励而跑偏。</p>
+<p>GRPO 的直觉是：对同一道题采样一组答案，在组内比较相对好坏，用相对奖励推动模型改进。它减少了对单独价值函数/批判模型的依赖，更强调“干中学”和组内相对评价。</p>
+</details>
+</section>
+<section class="section" id="llm-peft"><h2>12. 参数高效微调：Adapter 与 LoRA <span class="tag know">了解</span></h2>
+<p>全量微调要更新全部参数，显存、计算和存储开销都很大。参数高效微调 PEFT 的目标是：冻结大部分预训练参数，只训练很少的新增参数或部分参数。</p>
+<p>Adapter-tuning 的做法是在注意力层或前馈层附近插入小型适配器模块。原模型参数基本冻结，只训练 Adapter、层归一化或任务头等少量参数。它的优势是任务适配灵活，可以为不同任务保存不同 Adapter。</p>
+<p>LoRA 的核心是低秩适配。它不直接更新完整权重矩阵 $W$，而是学习一个低秩更新量：</p>
+<div class="formula">
+$$
+W&#x27;=W+\Delta W,\qquad \Delta W=BA
+$$
+</div>
+<p>其中 $A$ 和 $B$ 是两个小矩阵，秩 $r$ 很小，所以可训练参数远少于全量微调。LoRA 常加在 Attention 或 FFN 的投影矩阵上。推理时可以把 $\Delta W$ 合并回原权重，不额外增加推理计算。</p>
+<details>
+<summary>展开：为什么 LoRA 能省参数</summary>
+<p>假设原始权重矩阵：</p>
+<div class="formula">
+$$
+W\in R^{d\times k}
+$$
+</div>
+<p>全量微调需要学习一个同样大小的更新：</p>
+<div class="formula">
+$$
+\Delta W\in R^{d\times k}
+$$
+</div>
+<p>参数量是 $d\times k$。</p>
+<p>LoRA 假设更新矩阵可以近似为低秩分解：</p>
+<div class="formula">
+$$
+\Delta W=BA
+$$
+</div>
+<p>其中：</p>
+<div class="formula">
+$$
+B\in R^{d\times r},\quad A\in R^{r\times k},\quad r\ll \min(d,k)
+$$
+</div>
+<p>可训练参数量变成：</p>
+<div class="formula">
+$$
+d\times r+r\times k=r(d+k)
+$$
+</div>
+<p>当 $r$ 很小时，参数量大幅下降。初始化时常令 $B=0$，让 $\Delta W=0$，这样微调开始时模型行为与原模型一致，训练更稳定。</p>
+</details>
+</section>
+<section class="section" id="llm-rag-why"><h2>13. 检索增强生成 RAG：为什么需要外部知识 <span class="tag important">重点</span></h2>
+<p>RAG 的全称是 Retrieval-Augmented Generation，检索增强生成。它的核心思想是：</p>
+<blockquote>模型回答前，先从外部知识库检索相关资料，再把资料和问题一起交给生成模型。</blockquote>
+<p>这样做主要是为了解决大语言模型的几个问题：</p>
+<ul>
+<li>参数知识会过时：模型训练后发生的新事实不在参数里。</li>
+<li>长尾知识记不住：冷门知识很难靠预训练参数完整覆盖。</li>
+<li>幻觉风险：模型可能在没有可靠依据时编出看似合理的答案。</li>
+<li>成本问题：与其把所有知识都塞进参数，不如把可检索知识放在外部库里。</li>
+</ul>
+<p>RAG 不是让模型变成数据库，而是把“查资料”和“组织语言”拆开：检索器负责找材料，生成器负责读材料并回答。</p>
+</section>
+<section class="section" id="llm-rag-components"><h2>14. RAG 基本组成：知识检索 + 生成增强 <span class="tag important">重点</span></h2>
+<p>一个基本 RAG 系统包含两大模块：</p>
+<ol>
+<li>知识检索：把用户问题编码成查询，从知识库中找相关文档。</li>
+<li>生成增强：把检索到的文档和用户问题一起输入大模型，让模型基于外部知识生成答案。</li>
+</ol>
+<p>典型流程是：</p>
+<pre><code>用户问题
+-&gt; 查询构建
+-&gt; 检索器召回相关文档
+-&gt; 重排器筛选更相关文档
+-&gt; 拼接进 Prompt 或注入模型中间层
+-&gt; 生成模型回答</code></pre>
+<p>最常见、最容易实现的是输入端增强：把检索到的文档直接拼到 Prompt 里。这类方法不需要改模型参数，适合调用闭源模型或快速搭建系统。</p>
+</section>
+<section class="section" id="llm-rag-encoder"><h2>15. RAG 中的编码器：把问题和文档变成可比较的向量 <span class="tag important">重点</span></h2>
+<p>RAG 里的“编码器”通常指检索器中的文本编码模型。它和 Encoder-Decoder 里的 Encoder 有联系，但不完全是同一个语境。</p>
+<p>在稠密检索中，编码器把 query 和 doc 映射成向量：</p>
+<div class="formula">
+$$
+u=\operatorname{Encoder}(\text{query}),\qquad
+v=\operatorname{Encoder}(\text{doc})
+$$
+</div>
+<p>然后用相似度判断相关性：</p>
+<div class="formula">
+$$
+\operatorname{score}(q,d)=u^Tv
+$$
+</div>
+<p>常见检索器：</p>
+<table>
+<thead><tr>
+<th>类型</th>
+<th>做法</th>
+<th>优点</th>
+<th>局限</th>
+</tr></thead><tbody>
+<tr>
+<td>稀疏检索</td>
+<td>根据关键词、词频等匹配</td>
+<td>快、可解释、适合精确词</td>
+<td>语义泛化弱</td>
+</tr>
+<tr>
+<td>双编码器</td>
+<td>query 和 doc 分别编码成向量再算相似度</td>
+<td>文档可离线编码，检索快</td>
+<td>query-doc 交互较浅</td>
+</tr>
+<tr>
+<td>交叉编码器</td>
+<td>query 和 doc 拼在一起编码并打分</td>
+<td>语义交互深，排序准</td>
+<td>成本高，适合重排</td>
+</tr>
+<tr>
+<td>图检索器</td>
+<td>利用实体和关系图谱检索</td>
+<td>适合结构化知识</td>
+<td>构建维护成本高</td>
+</tr>
+</tbody></table>
+<p>实际系统常用“双编码器召回 + 交叉编码器重排”：先快，再准。</p>
+</section>
+<section class="section" id="llm-rag-architecture"><h2>16. RAG 架构分类：黑盒增强与白盒增强 <span class="tag important">重点</span></h2>
+<p>RAG 可以按是否更新大语言模型参数分成黑盒增强和白盒增强。</p>
+<table>
+<thead><tr>
+<th>架构</th>
+<th>参数是否更新</th>
+<th>代表思路</th>
+<th>优点</th>
+<th>缺点</th>
+</tr></thead><tbody>
+<tr>
+<td>黑盒无微调</td>
+<td>检索器和 LLM 都不更新</td>
+<td>In-Context RALM，把文档放进上下文</td>
+<td>实现简单、成本低、与模型解耦</td>
+<td>检索器和 LLM 缺少深度适配</td>
+</tr>
+<tr>
+<td>黑盒检索器微调</td>
+<td>LLM 不变，只调检索器</td>
+<td>REPLUG，用 LLM 反馈训练检索器</td>
+<td>不改 LLM，成本较低</td>
+<td>LLM 固定，适配上限受限</td>
+</tr>
+<tr>
+<td>白盒仅微调 LLM</td>
+<td>检索器不变，调 LLM</td>
+<td>RETRO，把检索信息注入隐藏层</td>
+<td>LLM 更会利用外部信息</td>
+<td>训练成本高，依赖检索器质量</td>
+</tr>
+<tr>
+<td>白盒协同微调</td>
+<td>检索器和 LLM 一起调</td>
+<td>ATLAS，用联合目标优化</td>
+<td>深度交互，效果潜力大</td>
+<td>实现复杂、资源需求高</td>
+</tr>
+</tbody></table>
+<p>复习时先记住：黑盒偏工程落地，白盒偏模型内部融合；无微调最简单，协同微调最强但最贵。</p>
+</section>
+<section class="section" id="llm-rag-when-where-how"><h2>17. 何时增强、何处增强、何以增强 <span class="tag important">重点</span></h2>
+<p>课件里 RAG 的重点可以归纳成三个问题。</p>
+<h3>17.1 何时增强</h3>
+<p>不是所有问题都需要检索。模型本来就会、且答案稳定的问题，检索可能只会增加延迟和噪声。需要检索的场景通常包括：</p>
+<ul>
+<li>涉及新知识、新政策、新数据。</li>
+<li>涉及专业文档、企业内部知识库、课程资料。</li>
+<li>问题很长或很具体，模型参数知识不可靠。</li>
+<li>需要引用依据或可追溯来源。</li>
+</ul>
+<p>“何时增强”的本质是判断：当前问题是否需要外部知识才能可靠回答。</p>
+<h3>17.2 何处增强</h3>
+<p>外部知识可以在不同位置进入模型：</p>
+<table>
+<thead><tr>
+<th>位置</th>
+<th>做法</th>
+<th>代表直觉</th>
+</tr></thead><tbody>
+<tr>
+<td>输入端</td>
+<td>把检索文档拼进 Prompt</td>
+<td>最常用、最易落地</td>
+</tr>
+<tr>
+<td>中间层</td>
+<td>将外部知识编码成向量，通过交叉注意力注入隐藏状态</td>
+<td>更深度融合，但要改模型</td>
+</tr>
+<tr>
+<td>输出端</td>
+<td>生成后用外部知识校验、修正或引用补全</td>
+<td>适合事实核查和后处理</td>
+</tr>
+</tbody></table>
+<p>这里的“中间层增强”又会和前面交叉注意力呼应：模型生成时不只看自己的上下文，还通过交叉注意力读取外部知识向量。</p>
+<h3>17.3 何以增强</h3>
+<p>也就是用什么外部知识增强：</p>
+<ul>
+<li>原始文档片段：最常见。</li>
+<li>结构化表格：适合精确数值和业务数据。</li>
+<li>知识图谱：适合实体关系。</li>
+<li>多模态资料：图像、视频、语音等。</li>
+<li>历史对话和用户画像：适合个性化回答，但要注意隐私和安全。</li>
+</ul>
+</section>
+<section class="section" id="llm-retrieval-pipeline"><h2>18. 知识检索流程：构库、构问、召回、重排 <span class="tag important">重点</span></h2>
+<p>RAG 的生成质量很大程度取决于检索质量。检索部分通常包含四步：</p>
+<ol>
+<li>知识库构建：采集、清洗、切分、向量化、建索引。</li>
+<li>查询构建：改写问题、拆分复杂问题、补充背景。</li>
+<li>文本检索：用稀疏检索或稠密检索召回候选文档。</li>
+<li>结果重排：用交叉编码器等更强模型重新排序，保留最相关片段。</li>
+</ol>
+<p>文档分块很关键。块太大，检索不精准，也容易塞满上下文；块太小，语义不完整。实际常常需要根据文档类型设置 chunk size、overlap、标题层级和元数据。</p>
+</section>
+<section class="section" id="llm-rag-efficiency"><h2>19. RAG 的降本增效 <span class="tag important">重点</span></h2>
+<p>RAG 的“降本增效”体现在两方面：</p>
+<ul>
+<li>降本：不必每次为了新知识重新训练大模型，也不必把所有知识都塞进参数；更新知识库比重新训练模型便宜得多。</li>
+<li>增效：检索到的证据能缩小模型搜索空间，提高事实性、可追溯性和领域适配能力。</li>
+</ul>
+<p>但 RAG 不是万能药。它会引入新的误差来源：</p>
+<ul>
+<li>检索不到正确文档，模型仍可能答错。</li>
+<li>检索到噪声文档，模型可能被误导。</li>
+<li>文档太多或太长，模型可能抓不住重点。</li>
+<li>Prompt 拼接不当，会造成上下文冲突。</li>
+</ul>
+<p>所以 RAG 系统要同时优化检索质量、重排质量、上下文组织和生成约束。</p>
+</section>
+<section class="section" id="llm-summary"><h2>20. 一页速记</h2>
+<ul>
+<li>N-gram：用短窗口统计词序列概率，简单但捕捉不了长程依赖。</li>
+<li>采样：模型给概率，策略决定选哪个 token；Top-k 固定候选数，Top-p 固定累计概率，Temperature 调随机性。</li>
+<li>曝光偏差：训练时看真实前缀，推理时看自己生成的前缀，错误会累积。</li>
+<li>Encoder-only：输入 token 双向完全注意力，强理解，弱开放生成。</li>
+<li>Decoder-only：因果下三角注意力，强生成，现代通用 LLM 主流。</li>
+<li>Encoder-Decoder：Encoder 管输入，Decoder 管输出，交叉注意力让输出 token 查询全部输入 token。</li>
+<li>交叉注意力：Query 来自 Decoder，Key/Value 来自 Encoder。</li>
+<li>后训练：SFT 让模型会按指令说话，RLHF/GRPO 让模型更符合偏好或推理目标。</li>
+<li>Adapter：往模型层里插小模块，只训练小模块。</li>
+<li>LoRA：用低秩矩阵学习权重更新，省显存、易合并。</li>
+<li>RAG：先检索外部知识，再生成答案，重点解决知识过时、长尾知识和幻觉。</li>
+<li>RAG 编码器：把 query/doc 编成向量；双编码器快，交叉编码器准。</li>
+<li>何时增强：模型参数知识不够可靠时增强。</li>
+<li>何处增强：输入端最常见，中间层最深度，输出端适合校验修正。</li>
+</ul>
+</section>
+
       <div class="footer">所有正文已合并到 index.html；GitHub Pages 只访问首页即可阅读完整笔记。</div>
     </main>
 
@@ -1535,6 +4475,12 @@ $$
         <a href="#nn-loss">损失函数</a>
         <a href="#nn-backprop">反向传播</a>
         <a href="#nn-optimizers">优化器</a>
+        <a href="#rep-representation-overview">表示学习</a>
+        <a href="#dv-overview">深度视觉模型</a>
+        <a href="#gen-overview">生成式模型</a>
+        <a href="#llm-overview">大语言模型</a>
+        <a href="#llm-attention-types">交叉注意力</a>
+        <a href="#llm-rag-why">RAG</a>
       </nav>
     </div>
   </div>

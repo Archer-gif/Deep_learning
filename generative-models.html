@@ -1,0 +1,1128 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>生成式模型复习笔记</title>
+  <script>
+    window.MathJax = {
+      tex: { inlineMath: [['$', '$']], displayMath: [['$$', '$$']] },
+      svg: { fontCache: 'global' }
+    };
+  </script>
+  <script>
+    window.addEventListener('DOMContentLoaded', () => {
+      const script = document.createElement('script');
+      script.src = 'https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js';
+      script.async = true;
+      document.head.appendChild(script);
+    });
+  </script>
+  <style>
+    :root {
+      --bg: #f6f7fb;
+      --paper: #ffffff;
+      --ink: #20242c;
+      --muted: #667085;
+      --line: #dfe3ea;
+      --nav: #14213d;
+      --nav-soft: #22345f;
+      --accent: #c62828;
+      --accent-soft: #fff1f1;
+      --blue: #246bfe;
+      --green: #17805b;
+      --shadow: 0 14px 34px rgba(20, 33, 61, 0.12);
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      color: var(--ink);
+      background: var(--bg);
+      font-family: "Microsoft YaHei", "PingFang SC", "Noto Sans CJK SC", Arial, sans-serif;
+      line-height: 1.72;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 280px minmax(0, 1fr);
+      min-height: 100vh;
+    }
+
+    aside {
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      overflow: auto;
+      background: var(--nav);
+      color: #fff;
+      padding: 24px 18px;
+      border-right: 1px solid rgba(255,255,255,0.08);
+    }
+
+    .brand {
+      padding: 6px 8px 18px;
+      border-bottom: 1px solid rgba(255,255,255,0.14);
+      margin-bottom: 16px;
+    }
+
+    .brand h1 {
+      margin: 0 0 8px;
+      font-size: 24px;
+      line-height: 1.18;
+      letter-spacing: 0;
+    }
+
+    .brand p {
+      margin: 0;
+      color: rgba(255,255,255,0.74);
+      font-size: 13px;
+    }
+
+    nav a {
+      display: block;
+      color: rgba(255,255,255,0.84);
+      text-decoration: none;
+      padding: 8px 10px;
+      border-radius: 6px;
+      font-size: 14px;
+    }
+
+    nav a:hover,
+    nav a.active {
+      background: var(--nav-soft);
+      color: #fff;
+    }
+
+    main {
+      min-width: 0;
+      padding: 28px;
+    }
+
+    .hero,
+    .section {
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: 0 8px 24px rgba(20, 33, 61, 0.06);
+      padding: 24px;
+      margin-bottom: 18px;
+    }
+
+    .hero {
+      background: linear-gradient(120deg, #ffffff 0%, #f4f8ff 100%);
+      box-shadow: var(--shadow);
+      padding: 28px;
+      margin-bottom: 22px;
+    }
+
+    h1 {
+      margin: 0 0 10px;
+      font-size: 34px;
+      line-height: 1.16;
+      letter-spacing: 0;
+    }
+
+    h2 {
+      margin: 0 0 16px;
+      font-size: 26px;
+      line-height: 1.25;
+      letter-spacing: 0;
+    }
+
+    h3 {
+      margin: 24px 0 10px;
+      font-size: 19px;
+      line-height: 1.32;
+      letter-spacing: 0;
+    }
+
+    h4 {
+      margin: 18px 0 8px;
+      font-size: 16px;
+      line-height: 1.35;
+      letter-spacing: 0;
+    }
+
+    p { margin: 10px 0; }
+    ul, ol { padding-left: 22px; }
+    li { margin: 4px 0; }
+
+    blockquote {
+      margin: 14px 0;
+      border-left: 4px solid var(--accent);
+      background: var(--accent-soft);
+      padding: 12px 14px;
+      border-radius: 0 8px 8px 0;
+      color: var(--ink);
+    }
+
+    code {
+      font-family: Consolas, "Cascadia Code", monospace;
+      background: #eef2f7;
+      border: 1px solid #d8dee8;
+      border-radius: 5px;
+      padding: 1px 5px;
+      font-size: 0.92em;
+    }
+
+    .tag {
+      display: inline-flex;
+      align-items: center;
+      min-height: 24px;
+      padding: 2px 8px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 700;
+      margin-left: 8px;
+      vertical-align: middle;
+    }
+
+    .tag.important { color: var(--accent); background: var(--accent-soft); border: 1px solid #ffd3d3; }
+    .tag.know { color: var(--green); background: #eefaf5; border: 1px solid #cdeedf; }
+    .tag.pass { color: var(--blue); background: #eef4ff; border: 1px solid #d5e2ff; }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 14px 0;
+      overflow: hidden;
+      border-radius: 8px;
+      border: 1px solid var(--line);
+      display: table;
+    }
+
+    th, td {
+      border: 1px solid var(--line);
+      padding: 10px 12px;
+      text-align: left;
+      vertical-align: top;
+    }
+
+    th {
+      background: #f1f4f9;
+      font-weight: 700;
+    }
+
+    .formula {
+      overflow-x: auto;
+      background: #fbfcff;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 12px 14px;
+      margin: 12px 0;
+      text-align: center;
+    }
+
+    details {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 12px 14px;
+      margin: 14px 0;
+      background: #fcfdff;
+    }
+
+    summary {
+      cursor: pointer;
+      font-weight: 700;
+      color: var(--nav);
+    }
+
+    .footer {
+      color: var(--muted);
+      font-size: 13px;
+      padding: 18px 4px 4px;
+      text-align: center;
+    }
+
+    @media (max-width: 900px) {
+      .layout { grid-template-columns: 1fr; }
+      aside {
+        position: relative;
+        height: auto;
+        padding: 18px;
+      }
+      nav {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 6px;
+      }
+      main { padding: 16px; }
+      h1 { font-size: 28px; }
+      h2 { font-size: 22px; }
+      table { display: block; overflow-x: auto; }
+    }
+</style>
+</head>
+<body>
+  <div class="layout">
+    <aside>
+      <div class="brand">
+        <h1>生成式模型</h1>
+        <p>第九章复习笔记</p>
+      </div>
+      <nav id="toc">
+        <a href="#overview">生成式模型复习笔记</a>
+        <a href="#priority">复习优先级</a>
+        <a href="#generative-goal">生成模型到底在学什么</a>
+        <a href="#vae-motivation">VAE 的核心动机</a>
+        <a href="#vae-math">VAE 的数学原理</a>
+        <a href="#vae-loss">VAE 损失函数：重建项和 KL 正则项</a>
+        <a href="#reparameterization">重参数化技巧</a>
+        <a href="#vae-generation">VAE 的生成能力与局限</a>
+        <a href="#gan">GAN 基本架构</a>
+        <a href="#diffusion-overview">Diffusion Model 总览</a>
+        <a href="#diffusion-denoiser">Diffusion 去噪模型设计</a>
+        <a href="#diffusion-training">Diffusion 训练流程</a>
+        <a href="#diffusion-inference">Diffusion 推理与条件生成</a>
+        <a href="#latent-diffusion">隐空间扩散与 Stable Diffusion</a>
+        <a href="#flow-matching">Flow Matching</a>
+        <a href="#summary">一页速记</a>
+      </nav>
+    </aside>
+    <main>
+<section class="hero" id="overview"><h1>生成式模型复习笔记</h1>
+<blockquote>依据第九章《生成式模型》课件、重点截图，以及本轮关于 VAE 隐变量分布、KL 正则项、重参数化技巧、随机采样生成、文生图条件控制的问答整理。红色重点详写；黑色内容以“知道是什么、为什么出现”为主；课件中出现但重点图未列出的内容简单带过。</blockquote>
+</section>
+<section class="section" id="priority"><h2>0. 复习优先级</h2>
+<table>
+<thead><tr>
+<th>优先级</th>
+<th>内容</th>
+<th>复习目标</th>
+</tr></thead><tbody>
+<tr>
+<td>重点</td>
+<td>VAE 数学原理、KL 正则项、重参数化技巧、Diffusion 的去噪模型设计与训练流程</td>
+<td>能讲清每个分布的含义、为什么要引入 Encoder、为什么 KL 是正则项、为什么重参数化后能反传、扩散模型到底训练什么</td>
+</tr>
+<tr>
+<td>了解</td>
+<td>GAN 的模型架构、生成器与判别器、损失函数与优化策略、Diffusion 的隐空间扩散</td>
+<td>能说清基本流程、训练目标、为什么 Stable Diffusion 要在隐空间里做扩散</td>
+</tr>
+<tr>
+<td>简单带过</td>
+<td>Flow Matching、Stable Diffusion 的应用意义、VAE/GAN/Diffusion/FM 的发展脉络</td>
+<td>知道名字、核心思想、和扩散模型的大致区别即可</td>
+</tr>
+</tbody></table>
+</section>
+<section class="section" id="generative-goal"><h2>1. 生成模型到底在学什么 <span class="tag know">了解</span></h2>
+<p>生成模型的目标不是给图片分类，而是学习真实数据的分布。假设真实图像来自一个复杂分布：</p>
+<div class="formula">
+$$
+p_{\text{data}}(x)
+$$
+</div>
+<p>模型希望学到一个近似分布：</p>
+<div class="formula">
+$$
+p_\theta(x)\approx p_{\text{data}}(x)
+$$
+</div>
+<p>训练好以后，从模型分布中采样，就能得到新图像。课件这一章主要讲四类生成模型：</p>
+<ul>
+<li>VAE：把图像编码到隐空间，再从隐空间解码生成图像。</li>
+<li>GAN：生成器和判别器对抗训练，让生成图像越来越像真实图像。</li>
+<li>Diffusion Model：从真实图像逐步加噪，再学习从噪声逐步去噪生成图像。</li>
+<li>Flow Matching：学习从噪声分布到图像分布的连续传输路径。</li>
+</ul>
+<p>这章重点是 VAE 和 Diffusion。GAN 知道基本架构和博弈目标即可；Flow Matching 只需要知道它也是“从噪声到数据”的生成路线。</p>
+</section>
+<section class="section" id="vae-motivation"><h2>2. VAE 的核心动机 <span class="tag important">重点</span></h2>
+<p>图像维度很高。例如一张 <code>256 x 256 x 3</code> 的彩色图像接近二十万维。直接在像素空间里随机采样，大多数结果都没有意义。</p>
+<p>VAE 的思路是：不要直接在高维像素空间里采样，而是学习一个低维隐空间。</p>
+<p>普通自编码器是：</p>
+<div class="formula">
+$$
+x \rightarrow \text{Encoder} \rightarrow z \rightarrow \text{Decoder} \rightarrow x&#x27;
+$$
+</div>
+<p>其中 <code>x</code> 是输入图像，<code>z</code> 是低维隐变量，<code>x&#x27;</code> 是重建图像。普通自编码器主要追求：</p>
+<div class="formula">
+$$
+x&#x27;\approx x
+$$
+</div>
+<p>问题是，普通自编码器通常把一张图压成一个确定的点：</p>
+<div class="formula">
+$$
+x_1\rightarrow z_1,\quad x_2\rightarrow z_2,\quad x_3\rightarrow z_3
+$$
+</div>
+<p>这样隐空间可能是破碎的。Decoder 只见过训练样本对应的少数点，随机采一个没见过的 <code>z</code>，可能落在空白区域，生成结果就容易崩。</p>
+<p>VAE 的关键改动是：</p>
+<blockquote>Encoder 不输出一个确定向量，而是输出一个分布。</blockquote>
+<p>也就是：</p>
+<div class="formula">
+$$
+q_\phi(z|x)=N(\mu,\sigma^2)
+$$
+</div>
+<p>这里 $q_\phi(z|x)$ 表示：给定图片 <code>x</code>，Encoder 认为它可能对应哪些隐变量 <code>z</code>。</p>
+<h3><code>q(z|x)</code> 是二维分布吗</h3>
+<p>不一定。它是几维，取决于你设定的隐变量 <code>z</code> 是几维。</p>
+<p>如果 latent dim = 2：</p>
+<div class="formula">
+$$
+z=[z_1,z_2]
+$$
+</div>
+<p>那么 <code>q(z|x)</code> 是二维高斯分布，采样一次就是一个二维点。</p>
+<p>如果 latent dim = 128：</p>
+<div class="formula">
+$$
+z\in R^{128},\quad \mu\in R^{128},\quad \sigma\in R^{128}
+$$
+</div>
+<p>那么采样一次得到的是一个 128 维向量。课件中画二维通常只是为了方便可视化。</p>
+<p>实际 VAE 常用对角高斯：</p>
+<div class="formula">
+$$
+q_\phi(z|x)=N(\mu,\operatorname{diag}(\sigma^2))
+$$
+</div>
+<p>意思是每个维度独立采样：</p>
+<div class="formula">
+$$
+z_i\sim N(\mu_i,\sigma_i^2)
+$$
+</div>
+</section>
+<section class="section" id="vae-math"><h2>3. VAE 的数学原理 <span class="tag important">重点</span></h2>
+<p>VAE 的生成假设是：</p>
+<div class="formula">
+$$
+z\sim p(z),\qquad x\sim p_\theta(x|z)
+$$
+</div>
+<p>其中：</p>
+<ul>
+<li><code>p(z)</code>：先验分布，通常取标准正态分布 <code>N(0,I)</code>。</li>
+<li>$p_\theta(x|z)$：Decoder 分布，表示给定隐变量 <code>z</code> 后生成图像 <code>x</code> 的概率。</li>
+<li>$p_\theta(x)$：模型整体认为图像 <code>x</code> 出现的概率。</li>
+</ul>
+<p>真正想最大化的是训练集中真实图像的似然：</p>
+<div class="formula">
+$$
+\max_\theta \log p_\theta(x)
+$$
+</div>
+<p>而：</p>
+<div class="formula">
+$$
+p_\theta(x)=\int p(z)p_\theta(x|z)\,dz
+$$
+</div>
+<p>这句话的意思是：某张图 <code>x</code> 的概率，等于所有可能的 <code>z</code> 生成它的概率加起来。</p>
+<p>问题是这个积分很难算。<code>z</code> 可能是几十维或几百维的连续变量，直接从整个 <code>p(z)</code> 里取遍所有值几乎不可行。</p>
+<h3>为什么要引入 $q_\phi(z|x)$</h3>
+<p>你之前理解的“缩小范围”是对的，但要再精确一点：</p>
+<blockquote>$q_\phi(z|x)$ 是训练时针对当前图片 <code>x</code> 的搜索分布，用来告诉模型哪些 <code>z</code> 更可能和这张图有关。</blockquote>
+<p>原本要从整个先验分布里考虑：</p>
+<div class="formula">
+$$
+z\sim p(z)
+$$
+</div>
+<p>但对一张猫图来说，大部分随机 <code>z</code> 可能和这张猫没有关系。Encoder 于是输出：</p>
+<div class="formula">
+$$
+q_\phi(z|x)
+$$
+</div>
+<p>它相当于在说：当前这张图比较可能来自隐空间的这一小片区域。</p>
+<p>所以训练时变成：</p>
+<div class="formula">
+$$
+z\sim q_\phi(z|x)
+$$
+</div>
+<p>再把 <code>z</code> 交给 Decoder 重建 <code>x</code>。</p>
+<p>不过注意：$q_\phi(z|x)$ 不是生成时用来采样的最终分布。生成时仍然用公共先验：</p>
+<div class="formula">
+$$
+z\sim p(z)=N(0,I)
+$$
+</div>
+<p>$q_\phi(z|x)$ 的作用是在训练中帮助 Decoder 学会隐空间到图像的对应关系。</p>
+<h3>$p_\theta(z|x)$ 和 $q_\phi(z|x)$ 的区别</h3>
+<p>真实后验是：</p>
+<div class="formula">
+$$
+p_\theta(z|x)=\frac{p_\theta(x|z)p(z)}{p_\theta(x)}
+$$
+</div>
+<p>它表示：给定图片 <code>x</code>，最可能对应哪些隐变量 <code>z</code>。</p>
+<p>但它里面含有 $p_\theta(x)$，而 $p_\theta(x)$ 又是那个算不动的积分，所以 $p_\theta(z|x)$ 也算不动。</p>
+<p>于是 VAE 引入一个可训练的近似分布：</p>
+<div class="formula">
+$$
+q_\phi(z|x)\approx p_\theta(z|x)
+$$
+</div>
+<p>这就是“变分推断”，也是 VAE 中“变分”的来源。</p>
+<details>
+<summary>展开：ELBO 推导看不懂时怎么抓主线</summary>
+<p>我们想最大化：</p>
+<div class="formula">
+$$
+\log p_\theta(x)
+$$
+</div>
+<p>但它不好直接算。引入任意分布 $q_\phi(z|x)$ 后，可以得到一个下界：</p>
+<div class="formula">
+$$
+\log p_\theta(x)\ge
+E_{q_\phi(z|x)}[\log p_\theta(x|z)]-
+KL(q_\phi(z|x)\|p(z))
+$$
+</div>
+<p>这个下界叫 ELBO。最大化 ELBO，就等价于间接提高 $\log p_\theta(x)$。</p>
+<p>其中第一项：</p>
+<div class="formula">
+$$
+E_{q_\phi(z|x)}[\log p_\theta(x|z)]
+$$
+</div>
+<p>要求 Decoder 从采样到的 <code>z</code> 还原 <code>x</code>，所以对应重建项。</p>
+<p>第二项：</p>
+<div class="formula">
+$$
+KL(q_\phi(z|x)\|p(z))
+$$
+</div>
+<p>要求 Encoder 输出的分布靠近标准正态先验，所以对应 KL 正则项。</p>
+<p>训练时通常最小化负 ELBO：</p>
+<div class="formula">
+$$
+L_{\text{VAE}}
+=
+-E_{q_\phi(z|x)}[\log p_\theta(x|z)]
++
+KL(q_\phi(z|x)\|p(z))
+$$
+</div>
+<p>所以可以记成：</p>
+<div class="formula">
+$$
+\text{VAE Loss}=\text{重建损失}+\text{KL 正则项}
+$$
+</div>
+</details>
+</section>
+<section class="section" id="vae-loss"><h2>4. VAE 损失函数：重建项和 KL 正则项 <span class="tag important">重点</span></h2>
+<p>VAE 损失有两部分：</p>
+<div class="formula">
+$$
+L_{\text{VAE}}=L_{\text{recon}}+L_{\text{KL}}
+$$
+</div>
+<h3>重建损失管什么</h3>
+<p>重建损失负责让生成图像像原图：</p>
+<div class="formula">
+$$
+x&#x27;\approx x
+$$
+</div>
+<p>实际图像任务中常用 MSE：</p>
+<div class="formula">
+$$
+L_{\text{recon}}=\|x-x&#x27;\|^2
+$$
+</div>
+<p>它追求的是“重建精度”。如果只有这项，模型会尽量把每张图的信息塞进 <code>z</code>，使 Decoder 还原得越像越好。</p>
+<h3>KL 散度为什么叫正则项</h3>
+<p>KL 正则项负责约束 Encoder 输出的分布：</p>
+<div class="formula">
+$$
+KL(q_\phi(z|x)\|p(z))
+$$
+</div>
+<p>通常：</p>
+<div class="formula">
+$$
+p(z)=N(0,I)
+$$
+</div>
+<p>所以 KL 项的意思是：</p>
+<div class="formula">
+$$
+q_\phi(z|x)\quad \text{不要离}\quad N(0,I)\quad \text{太远}
+$$
+</div>
+<p>这就是课件里“正则项”的标准含义。更准确地说：</p>
+<ul>
+<li>生成精度项 = 重建损失。</li>
+<li>正则项 = KL 散度。</li>
+</ul>
+<p>如果课件某处让人感觉“生成精度也是正则项”，可以理解为它想表达“总损失里有两个约束”，但机器学习术语里真正的正则项通常指 KL 散度这一项。</p>
+<h3>为什么不能只要重建损失</h3>
+<p>如果只追求重建精度，模型会倾向于让：</p>
+<div class="formula">
+$$
+\sigma\rightarrow 0
+$$
+</div>
+<p>也就是每张图的分布退化成一个点。这样 VAE 又变回普通自编码器：</p>
+<div class="formula">
+$$
+x\rightarrow z\rightarrow x&#x27;
+$$
+</div>
+<p>隐空间重新变得破碎，随机采样时容易落到 Decoder 没见过的区域。</p>
+<p>KL 项的作用是防止这种退化：</p>
+<div class="formula">
+$$
+q_\phi(z|x)\approx N(0,I)
+$$
+</div>
+<p>这样训练集中不同图像对应的分布会被规整到同一个公共隐空间里，区域之间有更多重叠和过渡。</p>
+<h3>训练后不用 Encoder，那为什么还能生成</h3>
+<p>训练阶段：</p>
+<div class="formula">
+$$
+x_i\rightarrow q_\phi(z|x_i)\rightarrow z_i\rightarrow \text{Decoder}\rightarrow x_i&#x27;
+$$
+</div>
+<p>每张图确实对应不同的分布。但是 KL 项不断把这些分布往同一个标准正态分布拉：</p>
+<div class="formula">
+$$
+q_\phi(z|x_i)\approx N(0,I)
+$$
+</div>
+<p>所以 Decoder 在训练中学到的是：</p>
+<blockquote>标准正态隐空间里的不同区域，对应不同类型的图像。</blockquote>
+<p>训练结束后，Encoder 的整理工作已经完成。生成时直接：</p>
+<div class="formula">
+$$
+z\sim N(0,I),\qquad x=\text{Decoder}(z)
+$$
+</div>
+<p>这不是说“所有图片都来自同一个具体样本的分布”，而是说：从公共隐空间分布里随机抽一个坐标点，Decoder 把这个点翻译成图像。</p>
+<h3>抽歪一点会不会完全变成别的东西</h3>
+<p>理想情况下不会。VAE 的训练目标会推动隐空间变得平滑：</p>
+<div class="formula">
+$$
+z\text{ 稍微变化}\rightarrow x\text{ 稍微变化}
+$$
+</div>
+<p>原因有两个：</p>
+<ul>
+<li>Encoder 输出的是分布，不是点。同一张图附近的一团 <code>z</code> 都要能重建相似图像。</li>
+<li>KL 项让不同样本分布靠近公共正态分布，减少孤立点和空白区域。</li>
+</ul>
+<p>但这不是绝对保证。VAE 训练不好、KL 太弱或隐空间组织不理想时，仍然可能采到奇怪区域。</p>
+<details>
+<summary>展开：对角高斯 KL 的解析式</summary>
+<p>若：</p>
+<div class="formula">
+$$
+q_\phi(z|x)=N(\mu,\operatorname{diag}(\sigma^2)),\qquad p(z)=N(0,I)
+$$
+</div>
+<p>则 KL 有解析解：</p>
+<div class="formula">
+$$
+KL(q_\phi(z|x)\|p(z))
+=
+\frac{1}{2}\sum_i
+(\mu_i^2+\sigma_i^2-\log\sigma_i^2-1)
+$$
+</div>
+<p>代码里常用 <code>log_var=log(sigma^2)</code>，写成：</p>
+<div class="formula">
+$$
+L_{\text{KL}}
+=
+-\frac{1}{2}\sum_i
+(1+\log\sigma_i^2-\mu_i^2-\sigma_i^2)
+$$
+</div>
+<p>两种写法本质一样。</p>
+</details>
+</section>
+<section class="section" id="reparameterization"><h2>5. 重参数化技巧 <span class="tag important">重点</span></h2>
+<p>VAE 训练时需要从 Encoder 输出的分布中采样：</p>
+<div class="formula">
+$$
+z\sim N(\mu,\sigma^2)
+$$
+</div>
+<p>问题是，直接采样像一个黑盒：</p>
+<div class="formula">
+$$
+(\mu,\sigma)\rightarrow \text{sample}\rightarrow z
+$$
+</div>
+<p>反向传播时很难知道 $\mu$ 或 $\sigma$ 变化一点，采样结果 <code>z</code> 会怎么变化。</p>
+<p>重参数化技巧把采样改写为：</p>
+<div class="formula">
+$$
+\epsilon\sim N(0,I)
+$$
+</div>
+<div class="formula">
+$$
+z=\mu+\sigma\cdot \epsilon
+$$
+</div>
+<p>随机性被移动到外部噪声 $\epsilon$ 上，而 $\epsilon$ 不依赖网络参数。</p>
+<h3>为什么这样就能算梯度</h3>
+<p>一次前向传播中，先随机采到一个 $\epsilon$。采到之后，在这一次计算图里它就是一个固定常数。</p>
+<p>例如：</p>
+<div class="formula">
+$$
+\epsilon=0.7
+$$
+</div>
+<p>则：</p>
+<div class="formula">
+$$
+z=\mu+0.7\sigma
+$$
+</div>
+<p>这就是普通可导函数：</p>
+<div class="formula">
+$$
+\frac{\partial z}{\partial \mu}=1,\qquad
+\frac{\partial z}{\partial \sigma}=\epsilon
+$$
+</div>
+<p>你之前问得很关键：$\partial z/\partial \sigma=\epsilon$，而 $\epsilon$ 是随机的，怎么梯度下降？</p>
+<p>答案是：<strong>随机梯度不是不能用，它是对真实期望梯度的随机估计。</strong></p>
+<p>训练真正优化的是：</p>
+<div class="formula">
+$$
+E_{z\sim N(\mu,\sigma^2)}[L(z)]
+$$
+</div>
+<p>重参数化后等价于：</p>
+<div class="formula">
+$$
+E_{\epsilon\sim N(0,I)}[L(\mu+\sigma\epsilon)]
+$$
+</div>
+<p>每次采一个或几个 $\epsilon$，就像 mini-batch SGD 每次只采一小批样本一样，用随机估计来更新参数。单次梯度会有噪声，但长期平均方向是对的。</p>
+<details>
+<summary>展开：一个一维例子说明随机梯度为什么可用</summary>
+<p>假设：</p>
+<div class="formula">
+$$
+L(z)=z^2,\qquad z=\mu+\sigma\epsilon
+$$
+</div>
+<p>则：</p>
+<div class="formula">
+$$
+L=(\mu+\sigma\epsilon)^2
+$$
+</div>
+<p>对 $\mu$ 和 $\sigma$ 求导：</p>
+<div class="formula">
+$$
+\frac{\partial L}{\partial \mu}=2(\mu+\sigma\epsilon)
+$$
+</div>
+<div class="formula">
+$$
+\frac{\partial L}{\partial \sigma}=2(\mu+\sigma\epsilon)\epsilon
+$$
+</div>
+<p>它们确实包含随机的 $\epsilon$。但取期望后：</p>
+<div class="formula">
+$$
+E[2(\mu+\sigma\epsilon)]=2\mu
+$$
+</div>
+<div class="formula">
+$$
+E[2(\mu+\sigma\epsilon)\epsilon]=2\sigma
+$$
+</div>
+<p>这正好是：</p>
+<div class="formula">
+$$
+E[z^2]=\mu^2+\sigma^2
+$$
+</div>
+<p>的真实梯度：</p>
+<div class="formula">
+$$
+\frac{\partial}{\partial\mu}=2\mu,\qquad
+\frac{\partial}{\partial\sigma}=2\sigma
+$$
+</div>
+<p>所以重参数化后的梯度虽然每次随机，但在统计意义上是正确的。</p>
+</details>
+</section>
+<section class="section" id="vae-generation"><h2>6. VAE 的生成能力与局限 <span class="tag know">了解</span></h2>
+<p>VAE 的生成流程是：</p>
+<div class="formula">
+$$
+z\sim N(0,I)
+$$
+</div>
+<div class="formula">
+$$
+x=\text{Decoder}(z)
+$$
+</div>
+<p>它能生成训练集中没见过的新图像，是因为训练时 Decoder 已经学习了公共隐空间到图像空间的映射。</p>
+<p>但普通 VAE 生成不可控。你不知道哪个 <code>z</code> 精确对应“白猫”“汽车”“某种风格”。如果要控制生成，需要额外条件，例如类别标签或文本：</p>
+<div class="formula">
+$$
+p_\theta(x|z,c)
+$$
+</div>
+<p>其中 <code>c</code> 是条件信息。</p>
+<p>VAE 另一个常见缺点是图像容易模糊。原因是像素级 MSE 倾向于平均多种可能结果。比如两张语义上都是猫的图，像素位置可能差很多，MSE 会鼓励模型生成平滑的折中结果。</p>
+<p>这也是课件随后引出 GAN 的原因：GAN 不只看像素误差，而是通过判别器学习“像不像真实图像”的分布级信号。</p>
+</section>
+<section class="section" id="gan"><h2>7. GAN 基本架构 <span class="tag know">了解</span></h2>
+<p>GAN 包含两个网络：</p>
+<ul>
+<li>生成器 <code>G</code>：输入随机噪声 <code>z</code>，输出假图像 <code>G(z)</code>。</li>
+<li>判别器 <code>D</code>：输入一张图，判断它是真图还是假图。</li>
+</ul>
+<p>训练目标是对抗博弈：</p>
+<div class="formula">
+$$
+\min_G\max_D V(D,G)
+$$
+</div>
+<p>经典损失写作：</p>
+<div class="formula">
+$$
+V(D,G)
+=
+E_{x\sim p_{\text{data}}}[\log D(x)]
++
+E_{z\sim p(z)}[\log(1-D(G(z)))]
+$$
+</div>
+<p>判别器希望：</p>
+<div class="formula">
+$$
+D(x)\rightarrow 1,\qquad D(G(z))\rightarrow 0
+$$
+</div>
+<p>生成器希望：</p>
+<div class="formula">
+$$
+D(G(z))\rightarrow 1
+$$
+</div>
+<p>训练时交替优化：</p>
+<ul>
+<li>固定 <code>G</code>，训练 <code>D</code> 区分真图和假图。</li>
+<li>固定 <code>D</code>，训练 <code>G</code> 让假图骗过 <code>D</code>。</li>
+</ul>
+<p>当生成分布和真实分布完全一致时：</p>
+<div class="formula">
+$$
+p_G(x)=p_{\text{data}}(x)
+$$
+</div>
+<p>此时判别器无法区分真假：</p>
+<div class="formula">
+$$
+D(x)=\frac{1}{2}
+$$
+</div>
+<p>课件里还提到理论上最优判别器会把生成器目标转化为真实分布与生成分布之间的 JS 散度。复习时知道结论即可：GAN 的目标是让生成分布逼近真实图像分布。</p>
+</section>
+<section class="section" id="diffusion-overview"><h2>8. Diffusion Model 总览 <span class="tag important">重点</span></h2>
+<p>扩散模型的核心是两条过程：</p>
+<ul>
+<li>前向过程：从真实图像开始，逐步加噪，最后接近纯高斯噪声。</li>
+<li>反向过程：从纯噪声开始，逐步去噪，最后生成图像。</li>
+</ul>
+<p>直观流程：</p>
+<div class="formula">
+$$
+x_0\rightarrow x_1\rightarrow x_2\rightarrow \cdots \rightarrow x_T
+$$
+</div>
+<p>其中 <code>x_0</code> 是真实图像，<code>x_T</code> 接近纯噪声。</p>
+<p>生成时反过来：</p>
+<div class="formula">
+$$
+x_T\rightarrow x_{T-1}\rightarrow \cdots \rightarrow x_0
+$$
+</div>
+<p>前向加噪可以直接人为定义，因为我们知道怎么加高斯噪声。难点是反向去噪：模型要学会每一步该去掉什么噪声。</p>
+<p>所以 Diffusion 的本质可以记成：</p>
+<blockquote>训练一个噪声预测网络，让它在任意时间步 <code>t</code> 看见含噪图 <code>x_t</code> 后，预测当初加进去的噪声。</blockquote>
+</section>
+<section class="section" id="diffusion-denoiser"><h2>9. Diffusion 去噪模型设计 <span class="tag important">重点</span></h2>
+<p>课件给出两个思路。</p>
+<p>思路一：直接预测加噪前图像。</p>
+<div class="formula">
+$$
+x_t\rightarrow \text{Model}\rightarrow x_{t-1}\ \text{或}\ x_0
+$$
+</div>
+<p>问题是图像分布复杂，猫、车、人脸、风景差异很大，直接预测干净图像学习难度高。</p>
+<p>思路二：预测噪声。</p>
+<div class="formula">
+$$
+x_t,t\rightarrow \epsilon_\theta(x_t,t)
+$$
+</div>
+<p>然后用预测噪声去还原更干净的图像。</p>
+<p>为什么预测噪声更容易？因为无论原图是什么，加入的噪声都来自高斯分布：</p>
+<div class="formula">
+$$
+\epsilon\sim N(0,I)
+$$
+</div>
+<p>噪声的统计规律比图像本身简单，模型更容易学习。</p>
+</section>
+<section class="section" id="diffusion-training"><h2>10. Diffusion 训练流程 <span class="tag important">重点</span></h2>
+<p>朴素做法是从 <code>x_0</code> 开始一步步加噪，同时训练模型预测每一步噪声。但这样有两个问题：</p>
+<ul>
+<li>训练顺序固定，前期只学低噪声，后期只学高噪声，优化不稳定。</li>
+<li>如果每次随机时间步 <code>t</code> 都要真的加噪 <code>t</code> 次，计算很浪费。</li>
+</ul>
+<p>改进做法是：随机采样时间步 <code>t</code>，并用闭式公式一步得到 <code>x_t</code>。</p>
+<p>常见前向加噪公式是：</p>
+<div class="formula">
+$$
+x_t=\sqrt{\bar{\alpha}_t}x_0+\sqrt{1-\bar{\alpha}_t}\epsilon
+$$
+</div>
+<p>其中：</p>
+<ul>
+<li><code>x_0</code>：干净图像。</li>
+<li><code>t</code>：随机采样的时间步。</li>
+<li>$\epsilon\sim N(0,I)$：真实加入的噪声。</li>
+<li>$\bar{\alpha}_t$：由噪声强度累计得到的系数，控制第 <code>t</code> 步保留多少原图信息。</li>
+</ul>
+<p>训练时，模型输入：</p>
+<div class="formula">
+$$
+(x_t,t)
+$$
+</div>
+<p>模型输出：</p>
+<div class="formula">
+$$
+\epsilon_\theta(x_t,t)
+$$
+</div>
+<p>损失函数是预测噪声和真实噪声的 L2 损失：</p>
+<div class="formula">
+$$
+L_{\text{diffusion}}
+=
+\|\epsilon-\epsilon_\theta(x_t,t)\|^2
+$$
+</div>
+<h3>训练流程一页版</h3>
+<ol>
+<li>从训练集中随机取一张图 <code>x_0</code>。</li>
+<li>随机采样时间步 <code>t</code>。</li>
+<li>随机采样高斯噪声 $\epsilon$。</li>
+<li>用公式一步构造含噪图 <code>x_t</code>。</li>
+<li>让模型根据 <code>x_t</code> 和 <code>t</code> 预测噪声。</li>
+<li>用 $\|\epsilon-\epsilon_\theta(x_t,t)\|^2$ 更新模型。</li>
+</ol>
+<details>
+<summary>展开：为什么可以一步得到任意时间步的含噪图</summary>
+<p>每一步加噪可写成：</p>
+<div class="formula">
+$$
+x_t=\sqrt{\alpha_t}x_{t-1}+\sqrt{1-\alpha_t}\epsilon_t
+$$
+</div>
+<p>不断递归展开，可以得到：</p>
+<div class="formula">
+$$
+x_t=\sqrt{\bar{\alpha}_t}x_0+\sqrt{1-\bar{\alpha}_t}\epsilon
+$$
+</div>
+<p>其中：</p>
+<div class="formula">
+$$
+\bar{\alpha}_t=\prod_{s=1}^{t}\alpha_s
+$$
+</div>
+<p>关键点是：多个独立高斯噪声的线性组合仍然是高斯噪声，所以可以把多步噪声合并成一个新的 $\epsilon\sim N(0,I)$。</p>
+<p>这就是课件里“多步加噪变成单步加噪即可得到训练数据”的数学原因。</p>
+</details>
+</section>
+<section class="section" id="diffusion-inference"><h2>11. Diffusion 推理与条件生成 <span class="tag important">重点</span></h2>
+<p>推理阶段从纯噪声开始：</p>
+<div class="formula">
+$$
+x_T\sim N(0,I)
+$$
+</div>
+<p>然后循环执行：</p>
+<div class="formula">
+$$
+x_t\rightarrow x_{t-1}
+$$
+</div>
+<p>每一步模型预测当前噪声：</p>
+<div class="formula">
+$$
+\epsilon_\theta(x_t,t)
+$$
+</div>
+<p>再根据预测结果去掉一部分噪声。课件还提到，去噪后通常会加入一定随机噪声，这样可以增加生成多样性，也能缓解误差累积。</p>
+<h3>为什么普通扩散生成不可控</h3>
+<p>如果输入只有随机噪声：</p>
+<div class="formula">
+$$
+x_T\sim N(0,I)
+$$
+</div>
+<p>模型只能随机生成图像。它不知道你想要猫、车还是风景。</p>
+<p>要可控生成，就要加入条件：</p>
+<div class="formula">
+$$
+\epsilon_\theta(x_t,t,c)
+$$
+</div>
+<p>其中 <code>c</code> 可以是类别标签、文本向量、边缘图、深度图等。</p>
+<p>文生图时，文本不是直接变成一个 VAE 向量，而是作为条件参与每一步去噪：</p>
+<div class="formula">
+$$
+\text{prompt}\rightarrow \text{text encoder}\rightarrow c
+$$
+</div>
+<div class="formula">
+$$
+\epsilon_\theta(x_t,t,c)
+$$
+</div>
+<p>也就是说：</p>
+<blockquote>文本指导模型每一步“应该往哪个方向去噪”，最后随机噪声逐渐变成符合文字描述的图像。</blockquote>
+<p>这正好回答之前那个疑问：模型不是先知道某个隐空间向量精确对应“白猫”，而是在大量图文配对训练中学会“文本条件如何改变去噪方向”。</p>
+</section>
+<section class="section" id="latent-diffusion"><h2>12. 隐空间扩散与 Stable Diffusion <span class="tag important">重点/了解</span></h2>
+<p>普通扩散如果直接在像素空间做去噪，计算量很大。例如 <code>512 x 512</code> 图像有 262,144 个像素位置，还要多步迭代去噪，速度和显存压力都很高。</p>
+<p>Stable Diffusion 使用 Latent Diffusion 的思想：先用 VAE 把图像压到低维隐空间，再在隐空间里做扩散。</p>
+<p>大致流程：</p>
+<div class="formula">
+$$
+x\rightarrow \text{VAE Encoder}\rightarrow z
+$$
+</div>
+<p>在训练扩散模型时，对隐变量 <code>z</code> 加噪、预测噪声、计算损失。</p>
+<p>生成时：</p>
+<div class="formula">
+$$
+z_T\sim N(0,I)
+$$
+</div>
+<div class="formula">
+$$
+\text{text prompt}\rightarrow \text{text encoder}\rightarrow c
+$$
+</div>
+<div class="formula">
+$$
+z_T\rightarrow z_{T-1}\rightarrow\cdots\rightarrow z_0
+$$
+</div>
+<p>最后：</p>
+<div class="formula">
+$$
+z_0\rightarrow \text{VAE Decoder}\rightarrow x
+$$
+</div>
+<p>所以 Stable Diffusion 里，VAE 主要负责：</p>
+<div class="formula">
+$$
+\text{像素图像}\leftrightarrow \text{压缩隐空间}
+$$
+</div>
+<p>真正决定“根据文字生成什么”的，是文本编码器和条件去噪网络。</p>
+<p>这也解释了之前的问题：</p>
+<ul>
+<li>普通 VAE：从 <code>N(0,I)</code> 抽一个 <code>z</code>，Decoder 随机生成，不好控制。</li>
+<li>文生图扩散：从随机隐空间噪声开始，文本条件持续指导去噪，最终得到符合 prompt 的隐变量，再交给 VAE Decoder 解码。</li>
+</ul>
+</section>
+<section class="section" id="flow-matching"><h2>13. Flow Matching <span class="tag pass">简单带过</span></h2>
+<p>Flow Matching 也是从噪声生成图像，但它强调学习一条从噪声分布到数据分布的连续路径。</p>
+<p>课件中的直观说法是：</p>
+<div class="formula">
+$$
+x_0\rightarrow x_{0.25}\rightarrow x_{0.5}\rightarrow x_{0.75}\rightarrow x_1
+$$
+</div>
+<p>其中 <code>x_0</code> 来自噪声分布，<code>x_1</code> 来自图像分布。模型学习的是沿着路径把噪声搬运到图像的速度场或方向。</p>
+<p>只需要记住：</p>
+<ul>
+<li>Diffusion：常理解为多步加噪、再多步去噪。</li>
+<li>Flow Matching：直接学习从噪声到数据的连续传输路径。</li>
+<li>现在一些前沿生成模型会使用 Flow Matching 或相关思想。</li>
+</ul>
+</section>
+<section class="section" id="summary"><h2>14. 一页速记</h2>
+<table>
+<thead><tr>
+<th>模型</th>
+<th>核心思想</th>
+<th>重点记忆</th>
+</tr></thead><tbody>
+<tr>
+<td>VAE</td>
+<td>Encoder 输出分布，Decoder 从隐变量生成图像</td>
+<td><code>Loss = 重建损失 + KL 正则项</code>；`q(z</td>
+<td>x)<code> 是训练时针对当前样本的近似后验；生成时从 </code>N(0,I)` 采样</td>
+</tr>
+<tr>
+<td>GAN</td>
+<td>生成器和判别器对抗训练</td>
+<td><code>G</code> 想骗过 <code>D</code>，<code>D</code> 想区分真假；交替优化；理论目标是让 <code>p_G</code> 逼近 <code>p_data</code></td>
+</tr>
+<tr>
+<td>Diffusion</td>
+<td>先把图像加噪成高斯噪声，再学习反向去噪</td>
+<td>模型主要预测噪声；训练随机采样时间步；损失是预测噪声和真实噪声的 L2</td>
+</tr>
+<tr>
+<td>Stable Diffusion</td>
+<td>在 VAE 隐空间中做条件扩散</td>
+<td>文本不是直接变成图像向量，而是指导每一步去噪；最后用 VAE Decoder 解码</td>
+</tr>
+<tr>
+<td>Flow Matching</td>
+<td>学习从噪声到数据的传输路径</td>
+<td>知道概念即可：从噪声分布沿连续路径走向图像分布</td>
+</tr>
+</tbody></table>
+<p>最容易混的几个点：</p>
+<ul>
+<li>$q_\phi(z|x)$ 是 Encoder 给当前图片预测的隐变量分布，不是生成时最终使用的分布。</li>
+<li>生成时不用 Encoder，是因为训练时 KL 已经把各样本的隐变量分布规整到公共 <code>N(0,I)</code> 隐空间。</li>
+<li>KL 散度才是 VAE 的正则项；重建损失负责生成精度。</li>
+<li>重参数化后 $\epsilon$ 虽然随机，但一次前向中可当常数；梯度是随机估计，可以用于 SGD。</li>
+<li>Diffusion 文生图不是“文字直接找到某个 z”，而是“文字条件指导随机噪声逐步去噪成目标图像”。</li>
+</ul>
+</section>
+      <div class="footer">由 deep-vision-models-notes.md 生成，可直接上传到 GitHub Pages。</div>
+    </main>
+  </div>
+  <script>
+    const links = Array.from(document.querySelectorAll('nav a'));
+    const sections = links.map(a => document.querySelector(a.getAttribute('href'))).filter(Boolean);
+    const activate = () => {
+      let current = sections[0];
+      for (const section of sections) {
+        if (section.getBoundingClientRect().top <= 120) current = section;
+      }
+      links.forEach(a => a.classList.toggle('active', a.getAttribute('href') === '#' + current.id));
+    };
+    document.addEventListener('scroll', activate, { passive: true });
+    activate();
+  </script>
+</body>
+</html>

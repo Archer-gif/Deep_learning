@@ -1,0 +1,902 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>表征学习复习笔记</title>
+  <script>
+    window.MathJax = {
+      loader: { load: ['[tex]/ams', '[tex]/textmacros'] },
+      tex: {
+        packages: { '[+]': ['ams', 'textmacros'] },
+        inlineMath: [['$', '$']],
+        displayMath: [['$$', '$$']]
+      },
+      svg: { fontCache: 'global' }
+    };
+  </script>
+  <script>
+    window.addEventListener('DOMContentLoaded', () => {
+      const script = document.createElement('script');
+      script.src = 'https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js';
+      script.async = true;
+      script.onload = () => {
+        if (window.MathJax && window.MathJax.typesetPromise) {
+          window.MathJax.typesetPromise();
+        }
+      };
+      document.head.appendChild(script);
+    });
+  </script>
+  <style>
+    :root {
+      --bg: #f6f7fb;
+      --paper: #ffffff;
+      --ink: #20242c;
+      --muted: #667085;
+      --line: #dfe3ea;
+      --nav: #14213d;
+      --nav-soft: #22345f;
+      --accent: #c62828;
+      --accent-soft: #fff1f1;
+      --blue: #246bfe;
+      --green: #17805b;
+      --shadow: 0 14px 34px rgba(20, 33, 61, 0.12);
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      color: var(--ink);
+      background: var(--bg);
+      font-family: "Microsoft YaHei", "PingFang SC", "Noto Sans CJK SC", Arial, sans-serif;
+      line-height: 1.72;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 280px minmax(0, 1fr);
+      min-height: 100vh;
+    }
+
+    aside {
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      overflow: auto;
+      background: var(--nav);
+      color: #fff;
+      padding: 24px 18px;
+      border-right: 1px solid rgba(255,255,255,0.08);
+    }
+
+    .brand {
+      padding: 6px 8px 18px;
+      border-bottom: 1px solid rgba(255,255,255,0.14);
+      margin-bottom: 16px;
+    }
+
+    .brand h1 {
+      margin: 0 0 8px;
+      font-size: 24px;
+      line-height: 1.18;
+      letter-spacing: 0;
+    }
+
+    .brand p {
+      margin: 0;
+      color: rgba(255,255,255,0.74);
+      font-size: 13px;
+    }
+
+    nav a {
+      display: block;
+      color: rgba(255,255,255,0.84);
+      text-decoration: none;
+      padding: 8px 10px;
+      border-radius: 6px;
+      font-size: 14px;
+    }
+
+    nav a:hover,
+    nav a.active {
+      background: var(--nav-soft);
+      color: #fff;
+    }
+
+    main {
+      min-width: 0;
+      padding: 28px;
+    }
+
+    .hero,
+    .section {
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: 0 8px 24px rgba(20, 33, 61, 0.06);
+      padding: 24px;
+      margin-bottom: 18px;
+    }
+
+    .hero {
+      background: linear-gradient(120deg, #ffffff 0%, #f4f8ff 100%);
+      box-shadow: var(--shadow);
+      padding: 28px;
+      margin-bottom: 22px;
+    }
+
+    h1 {
+      margin: 0 0 10px;
+      font-size: 34px;
+      line-height: 1.16;
+      letter-spacing: 0;
+    }
+
+    h2 {
+      margin: 0 0 16px;
+      font-size: 26px;
+      line-height: 1.25;
+      letter-spacing: 0;
+    }
+
+    h3 {
+      margin: 24px 0 10px;
+      font-size: 19px;
+      line-height: 1.32;
+      letter-spacing: 0;
+    }
+
+    h4 {
+      margin: 18px 0 8px;
+      font-size: 16px;
+      line-height: 1.35;
+      letter-spacing: 0;
+    }
+
+    p { margin: 10px 0; }
+    ul, ol { padding-left: 22px; }
+    li { margin: 4px 0; }
+
+    blockquote {
+      margin: 14px 0;
+      border-left: 4px solid var(--accent);
+      background: var(--accent-soft);
+      padding: 12px 14px;
+      border-radius: 0 8px 8px 0;
+      color: var(--ink);
+    }
+
+    code {
+      font-family: Consolas, "Cascadia Code", monospace;
+      background: #eef2f7;
+      border: 1px solid #d8dee8;
+      border-radius: 5px;
+      padding: 1px 5px;
+      font-size: 0.92em;
+    }
+
+    .tag {
+      display: inline-flex;
+      align-items: center;
+      min-height: 24px;
+      padding: 2px 8px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 700;
+      margin-left: 8px;
+      vertical-align: middle;
+    }
+
+    .tag.important { color: var(--accent); background: var(--accent-soft); border: 1px solid #ffd3d3; }
+    .tag.know { color: var(--green); background: #eefaf5; border: 1px solid #cdeedf; }
+    .tag.pass { color: var(--blue); background: #eef4ff; border: 1px solid #d5e2ff; }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 14px 0;
+      overflow: hidden;
+      border-radius: 8px;
+      border: 1px solid var(--line);
+      display: table;
+    }
+
+    th, td {
+      border: 1px solid var(--line);
+      padding: 10px 12px;
+      text-align: left;
+      vertical-align: top;
+    }
+
+    th {
+      background: #f1f4f9;
+      font-weight: 700;
+    }
+
+    .formula {
+      overflow-x: auto;
+      background: #fbfcff;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 12px 14px;
+      margin: 12px 0;
+      text-align: center;
+    }
+
+    details {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 12px 14px;
+      margin: 14px 0;
+      background: #fcfdff;
+    }
+
+    summary {
+      cursor: pointer;
+      font-weight: 700;
+      color: var(--nav);
+    }
+
+    .footer {
+      color: var(--muted);
+      font-size: 13px;
+      padding: 18px 4px 4px;
+      text-align: center;
+    }
+
+    @media (max-width: 900px) {
+      .layout { grid-template-columns: 1fr; }
+      aside {
+        position: relative;
+        height: auto;
+        padding: 18px;
+      }
+      nav {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 6px;
+      }
+      main { padding: 16px; }
+      h1 { font-size: 28px; }
+      h2 { font-size: 22px; }
+      table { display: block; overflow-x: auto; }
+    }
+</style>
+</head>
+<body>
+  <div class="layout">
+    <aside>
+      <div class="brand">
+        <h1>表征学习</h1>
+        <p>第八章复习笔记</p>
+      </div>
+      <nav id="toc">
+        <a href="#overview">表征学习复习笔记</a>
+        <a href="#priority">复习优先级</a>
+        <a href="#representation-overview">表征学习总览</a>
+        <a href="#pretext">Pretext 任务</a>
+        <a href="#contrastive-learning">对比学习</a>
+        <a href="#simclr-architecture">SimCLR 的网络结构和输入</a>
+        <a href="#simclr-loss">SimCLR 的损失函数 NT-Xent</a>
+        <a href="#skip-gram">Word2Vec 与 Skip-Gram</a>
+        <a href="#language-self-supervision">语言自监督学习</a>
+        <a href="#image-self-supervision">图像自监督的新方向</a>
+        <a href="#representation-summary">表征学习一页速记</a>
+      </nav>
+    </aside>
+    <main>
+<section class="hero" id="overview"><h1>表征学习复习笔记</h1>
+<blockquote>依据第八章《表征学习》课件、重点截图，以及本轮关于 SimCLR 对比损失的问答整理。红色重点详写；黑色内容以“知道是什么、为什么出现”为主；课件中出现但重点图未列出的内容简单带过。</blockquote>
+</section>
+<section class="section" id="priority"><h2>0. 复习优先级</h2>
+<table>
+<thead><tr>
+<th>优先级</th>
+<th>内容</th>
+<th>复习目标</th>
+</tr></thead><tbody>
+<tr>
+<td>重点</td>
+<td>SimCLR 的网络结构和输入、SimCLR 的 NT-Xent 损失、Skip-Gram 变体的计算公式</td>
+<td>会解释网络流程、公式每一项含义，以及如何拉近正样本、推远负样本</td>
+</tr>
+<tr>
+<td>了解</td>
+<td>Pretext 任务、对比学习、语言自监督学习、掩码预测、Next-Token Prediction</td>
+<td>能说清概念、结构、适用场景和核心直觉</td>
+</tr>
+<tr>
+<td>简单带过</td>
+<td>MoCo、GloVe、BERT/RoBERTa/GPT、MAE/SimMIM、自监督学习发展脉络</td>
+<td>知道名字、作用和关键词即可</td>
+</tr>
+</tbody></table>
+</section>
+<section class="section" id="representation-overview"><h2>1. 表征学习总览 <span class="tag know">了解</span></h2>
+<p>表征学习关注的是：如何把原始数据 <code>x</code> 映射成更有用的向量 <code>z</code>。</p>
+<div class="formula">
+$$
+z=f(x)
+$$
+</div>
+<p>其中 <code>f</code> 通常是一个神经网络 encoder，<code>z</code> 是模型学到的表征向量。好的表征应该满足：</p>
+<ul>
+<li>语义相似的样本，在向量空间中距离近。</li>
+<li>语义不同的样本，在向量空间中距离远。</li>
+<li>下游任务只需要较简单的分类器或少量微调，就能取得不错效果。</li>
+</ul>
+<p>传统视觉任务常依赖 SIFT、HOG 等人工特征；现代深度学习更倾向于让模型从数据中自动学习表征。这样可以减少人工设计成本，并捕获更复杂的语义和非线性结构。</p>
+<h3>为什么需要表征学习</h3>
+<p>表征学习主要解决三个问题：</p>
+<ul>
+<li>降低数据维度：把高维原始像素、文本 token 等压缩成紧凑向量。</li>
+<li>捕获数据语义：让向量不仅表示像素或词面，还表示类别、对象、上下文、风格等抽象信息。</li>
+<li>提升泛化能力：学到的 encoder 可以迁移到分类、检测、分割、检索等下游任务。</li>
+</ul>
+<h3>如何评估表征好坏</h3>
+<p>常见方法有两类：</p>
+<ul>
+<li>Linear Probing：冻结 encoder，只用学到的表征训练一个线性分类器。若线性分类器效果好，说明表征已经把类别结构分得比较清楚。</li>
+<li>可视化聚类：用 PCA、t-SNE 等方法把高维表征降到二维，观察类内是否紧凑、类间是否分离。</li>
+</ul>
+</section>
+<section class="section" id="pretext"><h2>2. Pretext 任务 <span class="tag know">了解</span></h2>
+<p>Pretext 任务也叫代理任务。核心思想是：</p>
+<blockquote>不用人工标签，而是利用数据自身属性构造“伪标签”，让模型通过解决这个人为设计的小任务，间接学到有用表征。</blockquote>
+<p>典型流程：</p>
+<div class="formula">
+$$
+\text{未标注数据} \rightarrow \text{自动变换} \rightarrow \text{伪标签} \rightarrow \text{预训练 encoder} \rightarrow \text{下游任务}
+$$
+</div>
+<p>常见视觉 Pretext 任务：</p>
+<table>
+<thead><tr>
+<th>任务</th>
+<th>伪标签</th>
+<th>希望模型学到什么</th>
+</tr></thead><tbody>
+<tr>
+<td>旋转预测</td>
+<td><code>0°/90°/180°/270°</code></td>
+<td>主体方向、物体轮廓、场景重力方向</td>
+</tr>
+<tr>
+<td>相对位置预测</td>
+<td>一个 patch 相对另一个 patch 的方向</td>
+<td>局部之间的空间关系</td>
+</tr>
+<tr>
+<td>拼图游戏</td>
+<td>被打乱 patch 的排列类别</td>
+<td>从局部推断全局结构</td>
+</tr>
+<tr>
+<td>着色</td>
+<td>从灰度图恢复颜色</td>
+<td>材质、区域类别、场景上下文</td>
+</tr>
+</tbody></table>
+<p>Pretext 任务的局限是：模型可能只学会“解这道题”的捷径，而不是学到真正适合下游任务的通用语义。例如拼图任务可能利用 patch 边缘连续性取巧，着色任务可能记住颜色统计规律。</p>
+</section>
+<section class="section" id="contrastive-learning"><h2>3. 对比学习 <span class="tag know">了解</span></h2>
+<p>对比学习的直觉比传统 Pretext 任务更直接：</p>
+<blockquote>在特征空间中，拉近相似样本，推远不相似样本。</blockquote>
+<p>有监督对比学习可以用人工标签判断正负样本，但标注成本高。自监督对比学习则通过数据增强自动构造正负样本：</p>
+<ul>
+<li>正样本对：同一张原图经过两种不同增强得到的两个视图。</li>
+<li>负样本对：不同原图得到的视图。</li>
+</ul>
+<p>这件事背后的假设是：增强前后图像的语义不变。例如一张猫图经过随机裁剪、颜色抖动、翻转后，仍然应被理解为同一只猫或同一类语义对象。</p>
+</section>
+<section class="section" id="simclr-architecture"><h2>4. SimCLR 的网络结构和输入 <span class="tag important">重点</span></h2>
+<p>SimCLR 是视觉自监督对比学习中的经典框架。它的核心目标是：</p>
+<blockquote>不靠人工标签，只通过“同一图片的不同增强视图应该相似，不同图片的视图应该不相似”来训练 encoder。</blockquote>
+<h3>输入如何构造</h3>
+<p>假设一个 batch 中有 <code>N</code> 张原始图片：</p>
+<div class="formula">
+$$
+x_1,x_2,\dots,x_N
+$$
+</div>
+<p>SimCLR 对每张图片随机采样两次数据增强，得到两个视图：</p>
+<div class="formula">
+$$
+\tilde{x}_{2k-1}=t_1(x_k),\qquad \tilde{x}_{2k}=t_2(x_k)
+$$
+</div>
+<p>因此一个 batch 会从 <code>N</code> 张原图变成 <code>2N</code> 个增强视图。</p>
+<p>对于第 <code>k</code> 张原图：</p>
+<ul>
+<li>$\tilde{x}_{2k-1}$ 和 $\tilde{x}_{2k}$ 是正样本对。</li>
+<li>它们和其他 <code>2N-2</code> 个视图构成负样本对。</li>
+</ul>
+<h3>SimCLR 的四个模块</h3>
+<p>SimCLR 可以拆成四步：</p>
+<table>
+<thead><tr>
+<th>模块</th>
+<th>记号</th>
+<th>作用</th>
+</tr></thead><tbody>
+<tr>
+<td>数据增强</td>
+<td><code>t ~ T</code></td>
+<td>从同一图像生成不同视图，构造正样本对</td>
+</tr>
+<tr>
+<td>基础编码器</td>
+<td>$h=f(\tilde{x})$</td>
+<td>通常用 ResNet，把图像变成高维语义特征</td>
+</tr>
+<tr>
+<td>投影头</td>
+<td>$z=g(h)$</td>
+<td>把语义特征映射到对比损失空间</td>
+</tr>
+<tr>
+<td>对比损失</td>
+<td>NT-Xent</td>
+<td>拉近正样本、推远负样本</td>
+</tr>
+</tbody></table>
+<p>其中训练时损失一般作用在 <code>z</code> 上；下游任务迁移时通常丢掉投影头 <code>g</code>，使用基础编码器输出的 <code>h</code>。</p>
+<h3>为什么需要投影头</h3>
+<p>投影头不是为了最终分类，而是为了服务对比学习目标。</p>
+<p>对比任务可能需要保留一些“区分增强视图”的信息，例如颜色、局部裁剪位置、纹理细节；但这些信息未必是下游分类、检测需要的核心语义。投影头相当于一个缓冲层：</p>
+<ul>
+<li>$z=g(h)$ 用来承受对比损失的直接约束。</li>
+<li>$h=f(x)$ 保留更通用、更干净的语义表示。</li>
+</ul>
+<p>所以 SimCLR 训练结束后，常用 <code>h</code> 做下游任务，而不是直接用 <code>z</code>。</p>
+<h3>数据增强为什么重要</h3>
+<p>SimCLR 的关键经验是：数据增强组合决定表征质量。</p>
+<p>单纯随机裁剪可能让模型找到捷径。例如两张裁剪图如果共享局部纹理，模型可能只记纹理，不理解整体语义。把随机裁剪和颜色抖动结合，会迫使模型不依赖颜色或局部细节，而更多关注形状、结构和语义。</p>
+</section>
+<section class="section" id="simclr-loss"><h2>5. SimCLR 的损失函数 NT-Xent <span class="tag important">重点</span></h2>
+<p>NT-Xent 损失的全称是 Normalized Temperature-scaled Cross Entropy Loss。它可以理解成一个分类问题：</p>
+<blockquote>给定 anchor 视图 <code>i</code>，模型要从 batch 中所有其他视图里，把它真正的正样本 <code>j</code> 找出来。</blockquote>
+<p>对一对正样本 <code>(i,j)</code>，损失写成：</p>
+<div class="formula">
+$$
+\ell(i,j)
+=-\log
+\frac{\exp(\operatorname{sim}(z_i,z_j)/\tau)}
+{\sum_{k=1}^{2N}\mathbf{1}_{[k\ne i]}\exp(\operatorname{sim}(z_i,z_k)/\tau)}
+$$
+</div>
+<p>其中：</p>
+<ul>
+<li><code>z_i</code>：第 <code>i</code> 个增强视图经过 encoder 和 projector 后的向量。</li>
+<li><code>z_j</code>：与 <code>i</code> 来自同一原图的另一个增强视图，是正样本。</li>
+<li><code>z_k</code>：batch 中除 <code>i</code> 之外的所有候选视图。</li>
+<li><code>sim(z_i,z_k)</code>：相似度，通常是余弦相似度。</li>
+<li><code>τ</code>：温度系数，控制 softmax 分布的尖锐程度。</li>
+<li><code>1[k != i]</code>：排除样本自己，不让 <code>i</code> 和 <code>i</code> 比。</li>
+</ul>
+<h3>这个公式如何拉近正样本</h3>
+<p>分子是正样本对的相似度：</p>
+<div class="formula">
+$$
+\exp(\operatorname{sim}(z_i,z_j)/\tau)
+$$
+</div>
+<p>如果 <code>i</code> 和 <code>j</code> 更相似，分子会变大，整个 softmax 概率变大：</p>
+<div class="formula">
+$$
+\frac{\exp(\operatorname{sim}(z_i,z_j)/\tau)}
+{\sum_{k\ne i}\exp(\operatorname{sim}(z_i,z_k)/\tau)}
+\uparrow
+$$
+</div>
+<p>损失是负对数：</p>
+<div class="formula">
+$$
+-\log(\text{probability})
+$$
+</div>
+<p>概率越大，损失越小。因此训练会鼓励正样本相似度变大。</p>
+<h3>这个公式如何推远负样本</h3>
+<p>分母包含所有候选样本，包括正样本和负样本：</p>
+<div class="formula">
+$$
+\sum_{k=1}^{2N}\mathbf{1}_{[k\ne i]}\exp(\operatorname{sim}(z_i,z_k)/\tau)
+$$
+</div>
+<p>如果某个负样本 <code>k</code> 和 anchor <code>i</code> 太相似，那么：</p>
+<div class="formula">
+$$
+\exp(\operatorname{sim}(z_i,z_k)/\tau)
+$$
+</div>
+<p>会变大，分母变大，正样本概率变小，损失变大。为了降低损失，模型就会压低负样本与 anchor 的相似度。</p>
+<p>一句话记忆：</p>
+<blockquote>正样本相似度在分子里，变大会降低损失；负样本相似度在分母里，变大会提高损失。</blockquote>
+<h3>整个 batch 的总损失</h3>
+<p>一对正样本会算两个方向：</p>
+<ul>
+<li><code>i -&gt; j</code>：把 <code>i</code> 当 anchor，找 <code>j</code>。</li>
+<li><code>j -&gt; i</code>：把 <code>j</code> 当 anchor，找 <code>i</code>。</li>
+</ul>
+<p>总损失是：</p>
+<div class="formula">
+$$
+L=\frac{1}{2N}\sum_{k=1}^{N}
+\left[
+\ell(2k-1,2k)+\ell(2k,2k-1)
+\right]
+$$
+</div>
+<p>这表示 batch 中 <code>N</code> 对正样本，总共 <code>2N</code> 个 anchor，每个 anchor 都要完成一次“从候选集中找出自己正样本”的任务。</p>
+<details>
+<summary>展开：把 NT-Xent 看成 softmax 分类</summary>
+<p>对固定 anchor <code>i</code>，候选集合是 batch 中除自己以外的 <code>2N-1</code> 个视图。模型给每个候选 <code>k</code> 一个分数：</p>
+<div class="formula">
+$$
+s_{i,k}=\operatorname{sim}(z_i,z_k)/\tau
+$$
+</div>
+<p>经过 softmax 后，候选 <code>k</code> 是正样本的概率为：</p>
+<div class="formula">
+$$
+P(k\mid i)=
+\frac{\exp(s_{i,k})}{\sum_{a\ne i}\exp(s_{i,a})}
+$$
+</div>
+<p>真实答案是 <code>j</code>，所以交叉熵损失就是：</p>
+<div class="formula">
+$$
+\ell(i,j)=-\log P(j|i)
+$$
+</div>
+<p>这和普通多分类交叉熵非常像：类别不是人工标签，而是“哪个视图是同一张原图的另一个增强版本”。</p>
+</details>
+<details>
+<summary>展开：温度系数 τ 的直觉</summary>
+<p>温度系数 <code>τ</code> 控制 softmax 对相似度差异的敏感程度：</p>
+<div class="formula">
+$$
+s_{i,k}=\operatorname{sim}(z_i,z_k)/\tau
+$$
+</div>
+<ul>
+<li><code>τ</code> 较小：相似度差异会被放大，softmax 更尖锐，模型更关注难负样本。</li>
+<li><code>τ</code> 较大：分布更平滑，不会过度强调少数相似度较高的样本。</li>
+</ul>
+<p>SimCLR 中常需要调节 <code>τ</code>，因为它会影响“拉近”和“推远”的力度。</p>
+</details>
+</section>
+<section class="section" id="skip-gram"><h2>6. Word2Vec 与 Skip-Gram <span class="tag important">重点</span></h2>
+<p>Word2Vec 是单词表征学习的经典方法。它要解决的问题是：one-hot 向量无法表达语义相似性。</p>
+<p>例如“火车”和“高铁”在 one-hot 表示中是正交的，但它们语义接近。Word2Vec 的基本想法是：</p>
+<blockquote>一个词的含义由它经常出现的上下文决定。</blockquote>
+<h3>Skip-Gram 和 CBOW 的区别</h3>
+<p>Word2Vec 有两个常见变体：</p>
+<table>
+<thead><tr>
+<th>变体</th>
+<th>输入</th>
+<th>预测目标</th>
+<th>直觉</th>
+</tr></thead><tbody>
+<tr>
+<td>Skip-Gram</td>
+<td>中心词</td>
+<td>上下文词</td>
+<td>给定“猫”，预测附近可能有“可爱”“喵”“宠物”</td>
+</tr>
+<tr>
+<td>CBOW</td>
+<td>上下文词</td>
+<td>中心词</td>
+<td>给定周围词，预测中间词</td>
+</tr>
+</tbody></table>
+<p>截图红色重点是 Skip-Gram。</p>
+<h3>Skip-Gram 的目标函数</h3>
+<p>给定文本序列：</p>
+<div class="formula">
+$$
+w_1,w_2,\dots,w_T
+$$
+</div>
+<p>窗口大小为 <code>m</code>。对位置 <code>t</code>，中心词是 <code>w_t</code>，上下文词是：</p>
+<div class="formula">
+$$
+w_{t-m},\dots,w_{t-1},w_{t+1},\dots,w_{t+m}
+$$
+</div>
+<p>Skip-Gram 希望最大化中心词预测上下文词的概率：</p>
+<div class="formula">
+$$
+\prod_{t=1}^{T}
+\prod_{j=-m,\,j\ne 0}^{m}
+P(w_{t+j}\mid w_t)
+$$
+</div>
+<p>实际训练常取负平均 log likelihood，写成损失：</p>
+<div class="formula">
+$$
+J(\theta)=
+-\frac{1}{T}
+\sum_{t=1}^{T}
+\sum_{j=-m,\,j\ne 0}^{m}
+\log P(w_{t+j}\mid w_t;\theta)
+$$
+</div>
+<p>其中：</p>
+<ul>
+<li><code>t</code>：当前中心词在文本中的位置。</li>
+<li><code>m</code>：上下文窗口大小。</li>
+<li><code>w_t</code>：中心词。</li>
+<li><code>w_{t+j}</code>：窗口内的上下文词。</li>
+<li><code>θ</code>：所有词向量参数。</li>
+</ul>
+<h3>如何计算 <code>P(o|c)</code></h3>
+<p>对每个词 <code>w</code>，Word2Vec 通常维护两套向量：</p>
+<ul>
+<li>中心词向量 <code>v_w</code>。</li>
+<li>上下文词向量 <code>u_w</code>。</li>
+</ul>
+<p>给定中心词 <code>c</code>，上下文词为 <code>o</code> 的概率用 softmax 表示：</p>
+<div class="formula">
+$$
+P(o\mid c)=
+\frac{\exp(u_o^\top v_c)}
+{\sum_{w\in V}\exp(u_w^\top v_c)}
+$$
+</div>
+<p>其中 <code>V</code> 是整个词表。</p>
+<p>这个公式的含义是：</p>
+<ul>
+<li><code>u_o^T v_c</code> 越大，说明上下文词 <code>o</code> 和中心词 <code>c</code> 越匹配。</li>
+<li>分母对词表中所有词做归一化，把分数变成概率。</li>
+<li>训练会让真实上下文词的点积变大，让不相关词的点积相对变小。</li>
+</ul>
+<details>
+<summary>展开：为什么 Skip-Gram 公式能学到语义相似</summary>
+<p>假设两个词经常出现在相似上下文中，例如“火车”和“高铁”附近都常出现“车站”“杭州”“票”“出发”。为了让它们都能预测这些上下文词，模型会把它们的中心词向量调整到相似方向。</p>
+<p>从公式看，若中心词 <code>c</code> 要高概率预测上下文词 <code>o</code>，就需要：</p>
+<div class="formula">
+$$
+u_o^\top v_c
+$$
+</div>
+<p>变大。若两个中心词 <code>c_1</code> 和 <code>c_2</code> 共享很多上下文，它们都会被拉向这些上下文向量，于是：</p>
+<div class="formula">
+$$
+v_{c_1}\approx v_{c_2}
+$$
+</div>
+<p>这就是“分布相似导致向量相似”的来源。</p>
+</details>
+<h3>Negative Sampling</h3>
+<p>直接计算 softmax 的分母需要遍历整个词表，词表很大时计算代价极高。Negative Sampling 的做法是：</p>
+<blockquote>不再和所有词比较，而是只采样少量负样本，把多分类问题改成多个二分类问题。</blockquote>
+<p>对一个真实中心词-上下文词对 <code>(c,o)</code>，目标变成：</p>
+<div class="formula">
+$$
+\log\sigma(u_o^\top v_c)
++\sum_{i=1}^{K}
+\mathbb{E}_{w_i\sim P_n(w)}
+\left[
+\log\sigma(-u_{w_i}^\top v_c)
+\right]
+$$
+</div>
+<p>其中：</p>
+<ul>
+<li>第一项鼓励真实上下文 <code>o</code> 与中心词 <code>c</code> 相似。</li>
+<li>第二项鼓励采样到的负样本 <code>w_i</code> 与中心词 <code>c</code> 不相似。</li>
+<li><code>K</code> 通常取 <code>5~20</code>。</li>
+<li>负采样分布常与词频有关，例如按 <code>U(w)^{3/4}</code> 采样，以降低超高频词的支配性。</li>
+</ul>
+<p>这和 SimCLR 的思想非常像：真实上下文是正样本，采样词是负样本；正样本拉近，负样本推远。</p>
+</section>
+<section class="section" id="language-self-supervision"><h2>7. 语言自监督学习 <span class="tag know">了解</span></h2>
+<p>课件后半部分把表征学习扩展到语言模型。了解主线即可：</p>
+<table>
+<thead><tr>
+<th>方法</th>
+<th>核心任务</th>
+<th>关键词</th>
+</tr></thead><tbody>
+<tr>
+<td>BERT</td>
+<td>Masked Language Modeling</td>
+<td>随机 mask token，利用双向上下文预测原词</td>
+</tr>
+<tr>
+<td>RoBERTa</td>
+<td>更充分训练 BERT</td>
+<td>更多数据、更多步数、移除 NSP 辅助任务</td>
+</tr>
+<tr>
+<td>GPT</td>
+<td>Next-Token Prediction</td>
+<td>decoder-only，自回归预测下一个 token</td>
+</tr>
+<tr>
+<td>ChatGPT</td>
+<td>预训练 + 对齐</td>
+<td>在 GPT 基础上引入人类反馈对齐</td>
+</tr>
+</tbody></table>
+<h3>掩码预测</h3>
+<p>BERT 的核心是去噪自编码：随机选择约 <code>15%</code> token，让模型根据左右上下文预测被遮挡的原词。</p>
+<p>被选中的 token 通常按如下方式处理：</p>
+<table>
+<thead><tr>
+<th>比例</th>
+<th>处理方式</th>
+<th>目的</th>
+</tr></thead><tbody>
+<tr>
+<td>80%</td>
+<td>替换为 <code>[MASK]</code></td>
+<td>提供主要训练信号</td>
+</tr>
+<tr>
+<td>10%</td>
+<td>替换为随机 token</td>
+<td>防止模型只学会看到 <code>[MASK]</code> 才预测</td>
+</tr>
+<tr>
+<td>10%</td>
+<td>保持不变</td>
+<td>缓解预训练和微调输入不一致</td>
+</tr>
+</tbody></table>
+<h3>Next-Token Prediction</h3>
+<p>GPT 系列使用 Next-Token Prediction，把序列概率分解为：</p>
+<div class="formula">
+$$
+P(w_1,w_2,\dots,w_T)
+=\prod_{t=1}^{T}P(w_t\mid w_1,\dots,w_{t-1})
+$$
+</div>
+<p>模型只能看左侧已经出现的 token，然后预测下一个 token。这种单向约束天然适合文本生成。</p>
+</section>
+<section class="section" id="image-self-supervision"><h2>8. 图像自监督的新方向 <span class="tag pass">简单带过</span></h2>
+<p>图像和文本的自监督学习难点不同：</p>
+<ul>
+<li>文本是离散 token，天然有顺序和上下文。</li>
+<li>图像是连续像素，局部像素相似不一定等于语义相似。</li>
+</ul>
+<p>因此视觉自监督除了对比学习，也发展出掩码图像建模。</p>
+<h3>Masked Image Modeling</h3>
+<p>Masked Image Modeling 的核心是：</p>
+<blockquote>遮住图像的一大部分，让模型通过剩余可见区域理解整体，并重建缺失部分。</blockquote>
+<p>典型对比：</p>
+<table>
+<thead><tr>
+<th>文本 BERT</th>
+<th>图像 MIM</th>
+</tr></thead><tbody>
+<tr>
+<td>mask 约 15% token</td>
+<td>mask 大量 image patches，MAE 常用约 75%</td>
+</tr>
+<tr>
+<td>预测缺失词</td>
+<td>重建缺失图像块或像素</td>
+</tr>
+</tbody></table>
+<p>MAE 使用非对称结构：重型 encoder 只处理可见 patch，轻型 decoder 负责重建像素。这让模型把计算集中在表征学习上，而不是把所有算力浪费在重建细节上。</p>
+<p>SimMIM 则更直接：随机 mask 图像块，用轻量预测头回归原始像素值，结构简单，可适配 ViT、Swin 等骨干网络。</p>
+</section>
+<section class="section" id="representation-summary"><h2>9. 表征学习一页速记</h2>
+<table>
+<thead><tr>
+<th>问题</th>
+<th>速记答案</th>
+</tr></thead><tbody>
+<tr>
+<td>表征是什么</td>
+<td>原始数据经过 encoder 后得到的向量 <code>z=f(x)</code></td>
+</tr>
+<tr>
+<td>好表征什么样</td>
+<td>语义相似的样本距离近，语义不同的样本距离远</td>
+</tr>
+<tr>
+<td>Linear Probing 测什么</td>
+<td>冻结 encoder，只训练线性分类器，检验表征是否线性可分</td>
+</tr>
+<tr>
+<td>Pretext 任务是什么</td>
+<td>用数据自身构造伪标签，通过代理任务训练表征</td>
+</tr>
+<tr>
+<td>Pretext 的问题</td>
+<td>可能学会解题捷径，不一定学到通用语义</td>
+</tr>
+<tr>
+<td>对比学习核心</td>
+<td>拉近正样本，推远负样本</td>
+</tr>
+<tr>
+<td>SimCLR 正样本是什么</td>
+<td>同一原图的两个不同增强视图</td>
+</tr>
+<tr>
+<td>SimCLR 负样本是什么</td>
+<td>batch 中其他原图的增强视图</td>
+</tr>
+<tr>
+<td>SimCLR 输入数量</td>
+<td><code>N</code> 张原图增强成 <code>2N</code> 个视图</td>
+</tr>
+<tr>
+<td>SimCLR encoder 做什么</td>
+<td>把增强图像变成语义特征 <code>h</code></td>
+</tr>
+<tr>
+<td>SimCLR projector 做什么</td>
+<td>把 <code>h</code> 映射到对比损失空间 <code>z</code></td>
+</tr>
+<tr>
+<td>下游任务用哪个向量</td>
+<td>通常用 encoder 输出 <code>h</code>，不用 projector 输出 <code>z</code></td>
+</tr>
+<tr>
+<td>NT-Xent 为什么拉近正样本</td>
+<td>正样本相似度在分子里，变大使损失变小</td>
+</tr>
+<tr>
+<td>NT-Xent 为什么推远负样本</td>
+<td>负样本相似度在分母里，变大使损失变大</td>
+</tr>
+<tr>
+<td>Skip-Gram 做什么</td>
+<td>用中心词预测上下文词</td>
+</tr>
+<tr>
+<td>CBOW 做什么</td>
+<td>用上下文预测中心词</td>
+</tr>
+<tr>
+<td>Negative Sampling 做什么</td>
+<td>用少量负样本近似大词表 softmax</td>
+</tr>
+<tr>
+<td>BERT 学什么</td>
+<td>双向上下文下的 masked token 预测</td>
+</tr>
+<tr>
+<td>GPT 学什么</td>
+<td>根据左侧上下文预测下一个 token</td>
+</tr>
+<tr>
+<td>MAE 学什么</td>
+<td>mask 大量图像 patch，通过重建学习视觉表征</td>
+</tr>
+</tbody></table>
+</section>
+      <div class="footer">由 representation-learning-notes.md 生成，可直接上传到 GitHub Pages。</div>
+    </main>
+  </div>
+  <script>
+    const links = Array.from(document.querySelectorAll('nav a'));
+    const sections = links.map(a => document.querySelector(a.getAttribute('href'))).filter(Boolean);
+    const activate = () => {
+      let current = sections[0];
+      for (const section of sections) {
+        if (section.getBoundingClientRect().top <= 120) current = section;
+      }
+      links.forEach(a => a.classList.toggle('active', a.getAttribute('href') === '#' + current.id));
+    };
+    document.addEventListener('scroll', activate, { passive: true });
+    document.querySelectorAll('details').forEach(detail => {
+      detail.addEventListener('toggle', () => {
+        if (detail.open && window.MathJax && window.MathJax.typesetPromise) {
+          window.MathJax.typesetPromise([detail]);
+        }
+      });
+    });
+    activate();
+  </script>
+</body>
+</html>
